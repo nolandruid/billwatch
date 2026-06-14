@@ -74,16 +74,17 @@ export default async function BillPage({ params }: { params: Promise<{ slug: str
 
       {/* Masthead */}
       <header className="op-rise border-brand/10 mt-6 border-b pb-6">
-        <div className="flex items-center gap-3">
-          <span className="text-brand-darker font-mono text-2xl font-bold tracking-tight">
-            {bill.billNumber}
-          </span>
-          <StatusBadge status={bill.currentStatus} />
-        </div>
-        <h1 className="font-display text-foreground mt-3 text-3xl leading-tight font-semibold sm:text-4xl">
+        <span className="text-brand-darker font-mono text-2xl font-bold tracking-tight">
+          {bill.billNumber}
+        </span>
+        <h1 className="font-display text-foreground mt-2 text-3xl leading-tight font-semibold sm:text-4xl">
           {bill.shortTitle ?? bill.title}
         </h1>
         {bill.shortTitle && <p className="text-foreground/60 mt-2 leading-relaxed">{bill.title}</p>}
+        {/* Status on its own line so the long LEGISinfo text never crowds the number/title. */}
+        <div className="mt-4">
+          <StatusBadge status={bill.currentStatus} />
+        </div>
         <div className="text-foreground/50 mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
           {bill.billType && <span>{bill.billType}</span>}
           {bill.originatingChamber && (

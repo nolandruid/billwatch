@@ -50,8 +50,8 @@ export function BillRow({ item }: { item: BillListItem }) {
         </div>
       </div>
 
-      <div className="mt-3">
-        <StatusBadge status={item.currentStatus} />
+      <div className="mt-3 flex">
+        <StatusBadge status={item.currentStatus} compact />
       </div>
 
       <h3 className="font-display group-hover:text-cerise mt-3 line-clamp-2 text-base leading-snug font-semibold text-slate-900 transition-colors">

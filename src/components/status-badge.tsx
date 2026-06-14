@@ -60,13 +60,23 @@ export function stageMeta(status: string | null): StageMeta {
   };
 }
 
-export function StatusBadge({ status }: { status: string | null }) {
+export function StatusBadge({
+  status,
+  compact = false,
+}: {
+  status: string | null;
+  /** On cards, keep the pill to a single line (truncate) so cards stay uniform height. */
+  compact?: boolean;
+}) {
   const meta = stageMeta(status);
   return (
     <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${meta.badge}`}
+      title={compact ? (status ?? undefined) : undefined}
+      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${meta.badge} ${
+        compact ? "max-w-full" : ""
+      }`}
     >
-      {status ?? "Unknown"}
+      <span className={compact ? "truncate" : undefined}>{status ?? "Unknown"}</span>
     </span>
   );
 }
