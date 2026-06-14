@@ -157,7 +157,6 @@ export default async function BillPage({ params }: { params: Promise<{ slug: str
           </ol>
         </section>
       )}
-
     </div>
   );
 }

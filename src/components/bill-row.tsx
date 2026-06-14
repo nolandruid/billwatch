@@ -46,9 +46,7 @@ export function BillRow({ item }: { item: BillListItem }) {
               {item.chamber ? chamberLabel(item.chamber) : item.billType}
             </span>
           </div>
-          {item.sponsor && (
-            <p className="truncate text-xs text-slate-500">{item.sponsor}</p>
-          )}
+          {item.sponsor && <p className="truncate text-xs text-slate-500">{item.sponsor}</p>}
         </div>
       </div>
 

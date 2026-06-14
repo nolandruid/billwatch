@@ -52,7 +52,7 @@ export function ProgressTracker({
             <div className="flex min-w-0 flex-col items-center text-center">
               <span
                 className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ring-2 ring-offset-1 ring-offset-card",
+                  "ring-offset-card flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ring-2 ring-offset-1",
                   step.done
                     ? cn(c.fill, c.ring, "text-white")
                     : isCurrent
