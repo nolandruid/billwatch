@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { Bell, Check } from "lucide-react";
 
+type Status = "idle" | "sending" | "confirmation_sent" | "subscribed" | "error";
+
 /**
  * "Notify me" as an inline dialog: clicking the trigger opens a small modal that asks for an
- * email right there, no navigation to the bill page. The full double-opt-in flow lands once
- * /api/subscribe is wired; for now this captures intent and confirms.
+ * email right there, no navigation to the bill page. Posts to /api/subscribe (double opt-in).
  */
 export function NotifyDialog({
   billNumber,
@@ -17,19 +18,43 @@ export function NotifyDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
-  const [done, setDone] = useState(false);
+  const [status, setStatus] = useState<Status>("idle");
+  const [error, setError] = useState("");
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) return;
-    setDone(true);
+    if (!email.trim() || status === "sending") return;
+    setStatus("sending");
+    setError("");
+    try {
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, billNumber }),
+      });
+      const data = (await res.json()) as { ok: boolean; status?: Status; message?: string };
+      if (data.ok && (data.status === "confirmation_sent" || data.status === "subscribed")) {
+        setStatus(data.status);
+      } else {
+        setStatus("error");
+        setError(data.message || "Something went wrong. Please try again.");
+      }
+    } catch {
+      setStatus("error");
+      setError("Couldn't reach the server. Please try again.");
+    }
   }
 
   function close() {
     setOpen(false);
-    // Reset after the modal animates out so it's fresh next time.
-    setTimeout(() => setDone(false), 200);
+    setTimeout(() => {
+      setStatus("idle");
+      setEmail("");
+      setError("");
+    }, 200);
   }
+
+  const succeeded = status === "confirmation_sent" || status === "subscribed";
 
   return (
     <>
@@ -70,13 +95,21 @@ export function NotifyDialog({
               </button>
             </div>
 
-            {done ? (
+            {succeeded ? (
               <div className="text-foreground/80 mt-4 flex items-start gap-2 text-sm">
                 <Check className="text-cerise mt-0.5 h-4 w-4 shrink-0" />
                 <p>
-                  Thanks! We&apos;ll email you the moment{" "}
-                  <span className="font-semibold">{billNumber}</span> changes status. (Confirmation
-                  email lands once notifications go live.)
+                  {status === "confirmation_sent" ? (
+                    <>
+                      Almost there: check your inbox and click the confirmation link to start
+                      getting alerts for <span className="font-semibold">{billNumber}</span>.
+                    </>
+                  ) : (
+                    <>
+                      You&apos;re now tracking <span className="font-semibold">{billNumber}</span>.
+                      We&apos;ll email you each time it changes status.
+                    </>
+                  )}
                 </p>
               </div>
             ) : (
@@ -96,11 +129,13 @@ export function NotifyDialog({
                     placeholder="example@example.com"
                     className="border-mauve-deep/20 bg-background focus:border-cerise focus:ring-cerise/20 w-full rounded-lg border px-3 py-2.5 text-sm outline-none focus:ring-2"
                   />
+                  {status === "error" && <p className="text-intro text-xs">{error}</p>}
                   <button
                     type="submit"
-                    className="bg-cerise hover:bg-cerise-dark w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition"
+                    disabled={status === "sending"}
+                    className="bg-cerise hover:bg-cerise-dark w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition disabled:opacity-60"
                   >
-                    Notify me
+                    {status === "sending" ? "Sending…" : "Notify me"}
                   </button>
                 </form>
                 <p className="text-foreground/45 mt-3 text-xs">
