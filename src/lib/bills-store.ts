@@ -1,9 +1,5 @@
 import { createPublicClient } from "@/lib/supabase/server";
-import {
-  normalizeBill,
-  type LegisinfoBillSummary,
-  type NormalizedBill,
-} from "@/lib/legisinfo";
+import { normalizeBill, type LegisinfoBillSummary, type NormalizedBill } from "@/lib/legisinfo";
 
 export interface BillsSnapshot {
   bills: NormalizedBill[];

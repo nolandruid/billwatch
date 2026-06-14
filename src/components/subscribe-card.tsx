@@ -26,8 +26,7 @@ export function SubscribeCard({ billNumber }: { billNumber: string }) {
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.06]"
         style={{
-          backgroundImage:
-            "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
+          backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
           backgroundSize: "16px 16px",
         }}
         aria-hidden
@@ -62,7 +61,7 @@ export function SubscribeCard({ billNumber }: { billNumber: string }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="example@example.com"
-                className="focus:ring-cerise w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-transparent focus:ring-2"
+                className="focus:ring-cerise w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/40 focus:border-transparent focus:ring-2"
               />
               <button
                 type="submit"

@@ -75,8 +75,8 @@ export function NotifyDialog({
                 <Check className="text-cerise mt-0.5 h-4 w-4 shrink-0" />
                 <p>
                   Thanks — we&apos;ll email you the moment{" "}
-                  <span className="font-semibold">{billNumber}</span> changes status.
-                  (Confirmation email lands once notifications go live.)
+                  <span className="font-semibold">{billNumber}</span> changes status. (Confirmation
+                  email lands once notifications go live.)
                 </p>
               </div>
             ) : (
