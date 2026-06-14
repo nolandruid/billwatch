@@ -14,9 +14,9 @@ export function SiteHeader() {
           <FeedbackButton />
         </div>
       </div>
-      {/* Centered sub-banner gives "Parliament of Canada" a visible home. */}
-      <div className="border-mauve-deep/15 bg-mauve-soft border-b">
-        <p className="text-mauve-deep mx-auto max-w-5xl px-4 py-1.5 text-center font-mono text-[11px] tracking-[0.18em] uppercase">
+      {/* Centered sub-banner ribbon, in House-of-Commons chamber green. */}
+      <div className="bg-commons border-b border-black/10">
+        <p className="mx-auto max-w-5xl px-4 py-1.5 text-center font-mono text-[11px] tracking-[0.18em] text-white/80 uppercase">
           Tracking every bill before the Parliament of Canada
         </p>
       </div>
