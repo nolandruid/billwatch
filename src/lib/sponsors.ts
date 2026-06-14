@@ -79,12 +79,19 @@ function indexPhoto(map: Map<string, string>, name: string, url: string): void {
  * → "patti laboucane-benson").
  */
 function senatorNameFromSlug(slug: string, lastname: string): string {
+  let given: string;
+  let surname = lastname;
   if (slug.startsWith(`${lastname}-`)) {
-    return `${slug.slice(lastname.length + 1)} ${lastname}`;
+    given = slug.slice(lastname.length + 1);
+  } else {
+    // Fallback: assume a single-token given name at the end of the slug.
+    const parts = slug.split("-");
+    given = parts[parts.length - 1];
+    surname = parts.slice(0, -1).join("-");
   }
-  // Fallback: assume a single-token given name at the end of the slug.
-  const parts = slug.split("-");
-  return `${parts[parts.length - 1]} ${parts.slice(0, -1).join("-")}`;
+  // Some slugs bake a post-nominal onto the given name (e.g. "harder-peter-pc"); drop it.
+  given = given.replace(/-(pc|oc|cc|cm|qc|kc|om|cq|gcmg|gcvo)$/i, "");
+  return `${given} ${surname}`;
 }
 
 /** Fetch openparliament's MP photos into the map. */
@@ -123,14 +130,21 @@ async function addSenatorPhotos(map: Map<string, string>): Promise<void> {
     const html = await res.text();
 
     const seen = new Set<string>();
+    // Portraits vary: .jpg/.png/.webp, and some carry a year suffix (…_official_2024.jpg).
     const re =
-      /\/en\/senators\/([a-z0-9-]+)\/">\s*<img[\s\S]{0,500}?(\/media\/[a-z0-9]+\/sen_pho_([a-z0-9-]+)_(?:official|bio|portrait)\.jpg)/g;
+      /\/en\/senators\/([a-z0-9-]+)\/">\s*<img[\s\S]{0,600}?(\/media\/[a-z0-9]+\/sen_pho_([a-z0-9-]+?)_(?:official|bio|portrait)[a-z0-9_-]*\.(?:jpe?g|png|webp))/gi;
     for (const m of html.matchAll(re)) {
       const [, slug, mediaPath, lastname] = m;
       if (seen.has(slug)) continue;
       seen.add(slug);
       const url = `${SEN_BASE}${mediaPath}?width=300&quality=90`;
-      indexPhoto(map, senatorNameFromSlug(slug, lastname), url);
+      const name = senatorNameFromSlug(slug, lastname);
+      indexPhoto(map, name, url);
+      // Slugs join name parts with hyphens, but LEGISinfo uses spaces (e.g. "Mary Jane
+      // McCallum" vs slug "mccallum-mary-jane"). Index a space-normalized variant too so
+      // hyphenated/middle-name sponsors still match.
+      const spaced = name.replace(/-/g, " ");
+      if (spaced !== name) indexPhoto(map, spaced, url);
     }
   } catch {
     // Network/parse error — leave the map as-is.
