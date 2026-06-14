@@ -10,7 +10,13 @@ function formatActivity(date: string | null): string | null {
   if (!date) return null;
   const d = new Date(date);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
+  // Pin to ET so the server (UTC) and client (local TZ) render the same date — no hydration mismatch.
+  return d.toLocaleDateString("en-CA", {
+    timeZone: "America/Toronto",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 /**
