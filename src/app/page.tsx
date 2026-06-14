@@ -109,7 +109,7 @@ export default async function Home() {
               rel="noreferrer"
               className="hover:text-brand inline-flex items-center gap-1 transition"
             >
-              <LinkedinIcon className="h-3.5 w-3.5" /> LinkedIn
+              <LinkedinIcon className="h-3.5 w-3.5" /> Dev&apos;s LinkedIn
             </a>
           </div>
           {lastUpdated && (
