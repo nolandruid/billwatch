@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeBill, billUrl, type LegisinfoBillSummary } from "@/lib/legisinfo";
+import { normalizeBill, billUrl, buildProgress, type LegisinfoBillSummary } from "@/lib/legisinfo";
 
 function makeRaw(overrides: Partial<LegisinfoBillSummary> = {}): LegisinfoBillSummary {
   return {
@@ -19,6 +19,10 @@ function makeRaw(overrides: Partial<LegisinfoBillSummary> = {}): LegisinfoBillSu
     LatestCompletedMajorStageChamberId: 2,
     LatestActivityEn: "Royal assent received",
     LatestActivityDateTime: "2026-06-01T00:00:00",
+    PassedHouseFirstReadingDateTime: "2025-11-05T00:00:00",
+    PassedHouseThirdReadingDateTime: "2025-12-01T00:00:00",
+    PassedSenateFirstReadingDateTime: "2025-12-02T00:00:00",
+    PassedSenateThirdReadingDateTime: "2026-05-20T00:00:00",
     ReceivedRoyalAssentDateTime: "2026-06-01T00:00:00",
     ...overrides,
   };
@@ -66,5 +70,39 @@ describe("normalizeBill", () => {
     const n = normalizeBill(makeRaw({ ShortTitleEn: "", SponsorEn: null }));
     expect(n.shortTitle).toBeNull();
     expect(n.sponsor).toBeNull();
+  });
+});
+
+describe("buildProgress", () => {
+  it("orders steps by originating chamber (House bill: House before Senate)", () => {
+    const steps = buildProgress(makeRaw({ OriginatingChamberId: 1 }));
+    expect(steps.map((s) => s.label)).toEqual([
+      "Introduced",
+      "Passed House",
+      "Passed Senate",
+      "Royal Assent",
+    ]);
+  });
+
+  it("orders steps by originating chamber (Senate bill: Senate before House)", () => {
+    const steps = buildProgress(makeRaw({ OriginatingChamberId: 2 }));
+    expect(steps.map((s) => s.label)).toEqual([
+      "Introduced",
+      "Passed Senate",
+      "Passed House",
+      "Royal Assent",
+    ]);
+  });
+
+  it("marks a step done only when its milestone date is present", () => {
+    const steps = buildProgress(
+      makeRaw({
+        OriginatingChamberId: 1,
+        PassedHouseThirdReadingDateTime: "2025-12-01T00:00:00",
+        PassedSenateThirdReadingDateTime: null,
+        ReceivedRoyalAssentDateTime: null,
+      }),
+    );
+    expect(steps.map((s) => s.done)).toEqual([true, true, false, false]);
   });
 });
