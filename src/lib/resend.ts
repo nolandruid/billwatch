@@ -28,7 +28,8 @@ export async function sendEmail(opts: {
 }): Promise<boolean> {
   const resend = getClient();
   if (!resend) {
-    console.warn("[email] RESEND_API_KEY not set; skipping send to", opts.to);
+    // Don't log the recipient address (PII).
+    console.warn("[email] RESEND_API_KEY not set; skipping send.");
     return false;
   }
   try {
