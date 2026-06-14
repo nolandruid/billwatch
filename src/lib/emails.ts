@@ -76,6 +76,33 @@ BillWatch is independent and not affiliated with the Government of Canada.`;
   return { subject, html, text };
 }
 
+export function subscribedEmail(opts: {
+  billNumber: string;
+  billTitle: string;
+  billUrl: string;
+  unsubscribeUrl: string;
+}): { subject: string; html: string; text: string } {
+  const { billNumber, billTitle, billUrl, unsubscribeUrl } = opts;
+  const subject = `You're now tracking ${billNumber}`;
+  const html = layout(
+    `<p style="margin:0 0 16px;">You're now tracking <strong>${billNumber}</strong> &mdash;
+      ${escapeHtml(billTitle)}. We'll email you each time it changes status.</p>
+     <a href="${billUrl}" style="display:inline-block;background:${BRAND};color:#fff;
+       text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px;">
+       View ${billNumber} on BillWatch</a>`,
+    `You subscribed on billwatch.ca.
+     <a href="${unsubscribeUrl}" style="color:#6b7280;">Unsubscribe</a>.
+     BillWatch is an independent, open-source project, not affiliated with the Government of Canada.`,
+  );
+  const text = `You're now tracking ${billNumber} (${billTitle}). We'll email you each time it changes status.
+
+View on BillWatch: ${billUrl}
+
+Unsubscribe: ${unsubscribeUrl}
+BillWatch is independent and not affiliated with the Government of Canada.`;
+  return { subject, html, text };
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")

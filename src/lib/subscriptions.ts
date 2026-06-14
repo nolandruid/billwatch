@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail, siteUrl } from "@/lib/resend";
-import { confirmationEmail } from "@/lib/emails";
+import { confirmationEmail, subscribedEmail } from "@/lib/emails";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -36,10 +36,15 @@ export async function subscribeToBill(
   if (!bill) return { ok: false, status: "error", message: "We couldn't find that bill." };
 
   // Find or create the subscriber.
-  let sub: { id: string; confirmed: boolean; confirm_token: string } | null = null;
+  let sub: {
+    id: string;
+    confirmed: boolean;
+    confirm_token: string;
+    unsubscribe_token: string;
+  } | null = null;
   const existing = await supabase
     .from("subscribers")
-    .select("id, confirmed, confirm_token")
+    .select("id, confirmed, confirm_token, unsubscribe_token")
     .eq("email", email)
     .maybeSingle();
   sub = existing.data;
@@ -47,7 +52,7 @@ export async function subscribeToBill(
     const ins = await supabase
       .from("subscribers")
       .insert({ email })
-      .select("id, confirmed, confirm_token")
+      .select("id, confirmed, confirm_token, unsubscribe_token")
       .single();
     if (ins.error || !ins.data) {
       return { ok: false, status: "error", message: "Something went wrong. Please try again." };
@@ -63,7 +68,24 @@ export async function subscribeToBill(
       { onConflict: "subscriber_id,bill_id", ignoreDuplicates: true },
     );
 
-  if (sub.confirmed) return { ok: true, status: "subscribed" };
+  // Already-confirmed subscriber: it's active immediately, but still send an acknowledgement
+  // so they get an email confirming the subscription (not just the on-screen message).
+  if (sub.confirmed) {
+    await sendEmail({
+      to: email,
+      ...subscribedEmail({
+        billNumber: bill.bill_number,
+        billTitle: bill.title,
+        billUrl: `${siteUrl()}/bills/${bill.bill_number.toLowerCase()}`,
+        unsubscribeUrl: `${siteUrl()}/api/unsubscribe?token=${sub.unsubscribe_token}`,
+      }),
+      headers: {
+        "List-Unsubscribe": `<${siteUrl()}/api/unsubscribe?token=${sub.unsubscribe_token}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+    });
+    return { ok: true, status: "subscribed" };
+  }
 
   const confirmUrl = `${siteUrl()}/api/confirm?token=${sub.confirm_token}`;
   await sendEmail({
