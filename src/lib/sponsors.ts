@@ -79,12 +79,19 @@ function indexPhoto(map: Map<string, string>, name: string, url: string): void {
  * → "patti laboucane-benson").
  */
 function senatorNameFromSlug(slug: string, lastname: string): string {
+  let given: string;
+  let surname = lastname;
   if (slug.startsWith(`${lastname}-`)) {
-    return `${slug.slice(lastname.length + 1)} ${lastname}`;
+    given = slug.slice(lastname.length + 1);
+  } else {
+    // Fallback: assume a single-token given name at the end of the slug.
+    const parts = slug.split("-");
+    given = parts[parts.length - 1];
+    surname = parts.slice(0, -1).join("-");
   }
-  // Fallback: assume a single-token given name at the end of the slug.
-  const parts = slug.split("-");
-  return `${parts[parts.length - 1]} ${parts.slice(0, -1).join("-")}`;
+  // Some slugs bake a post-nominal onto the given name (e.g. "harder-peter-pc"); drop it.
+  given = given.replace(/-(pc|oc|cc|cm|qc|kc|om|cq|gcmg|gcvo)$/i, "");
+  return `${given} ${surname}`;
 }
 
 /** Fetch openparliament's MP photos into the map. */
@@ -123,14 +130,21 @@ async function addSenatorPhotos(map: Map<string, string>): Promise<void> {
     const html = await res.text();
 
     const seen = new Set<string>();
+    // Portraits vary: .jpg/.png/.webp, and some carry a year suffix (…_official_2024.jpg).
     const re =
-      /\/en\/senators\/([a-z0-9-]+)\/">\s*<img[\s\S]{0,500}?(\/media\/[a-z0-9]+\/sen_pho_([a-z0-9-]+)_(?:official|bio|portrait)\.jpg)/g;
+      /\/en\/senators\/([a-z0-9-]+)\/">\s*<img[\s\S]{0,600}?(\/media\/[a-z0-9]+\/sen_pho_([a-z0-9-]+?)_(?:official|bio|portrait)[a-z0-9_-]*\.(?:jpe?g|png|webp))/gi;
     for (const m of html.matchAll(re)) {
       const [, slug, mediaPath, lastname] = m;
       if (seen.has(slug)) continue;
       seen.add(slug);
       const url = `${SEN_BASE}${mediaPath}?width=300&quality=90`;
-      indexPhoto(map, senatorNameFromSlug(slug, lastname), url);
+      const name = senatorNameFromSlug(slug, lastname);
+      indexPhoto(map, name, url);
+      // Slugs join name parts with hyphens, but LEGISinfo uses spaces (e.g. "Mary Jane
+      // McCallum" vs slug "mccallum-mary-jane"). Index a space-normalized variant too so
+      // hyphenated/middle-name sponsors still match.
+      const spaced = name.replace(/-/g, " ");
+      if (spaced !== name) indexPhoto(map, spaced, url);
     }
   } catch {
     // Network/parse error — leave the map as-is.
@@ -150,11 +164,26 @@ export async function fetchSponsorPhotoMap(): Promise<Map<string, string>> {
   return map;
 }
 
+/**
+ * Hand-curated aliases for the rare cases where a sponsor's LEGISinfo name and their photo
+ * source's name are unambiguously the same person but don't normalize to the same key —
+ * a nickname or a since-changed surname. Keyed by sponsorKey(LEGISinfo name) → the name to
+ * look up in the photo map instead.
+ */
+const NAME_ALIASES: Record<string, string> = {
+  "martin klyne": "marty klyne", // Senate site lists him as "Marty"
+  "michelle rempel garner": "michelle rempel", // openparliament hasn't added "Garner"
+};
+
 /** Look up a sponsor's photo URL in the map, or null if not found. */
 export function photoForSponsor(
   map: Map<string, string>,
   sponsorName: string | null | undefined,
 ): string | null {
   if (!sponsorName) return null;
-  return map.get(sponsorKey(sponsorName)) ?? map.get(firstLastKey(sponsorName)) ?? null;
+  const direct = map.get(sponsorKey(sponsorName)) ?? map.get(firstLastKey(sponsorName));
+  if (direct) return direct;
+  const alias = NAME_ALIASES[sponsorKey(sponsorName)];
+  if (alias) return map.get(sponsorKey(alias)) ?? map.get(firstLastKey(alias)) ?? null;
+  return null;
 }

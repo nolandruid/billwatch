@@ -31,6 +31,10 @@
   --color-senate: #6e5a6b; /* Senate (muted plum) */
   --color-senate-soft: #ece7eb;
 
+  /* The deep green of the House of Commons chamber — used for the masthead ribbon. */
+  --color-commons: #265c3a;
+  --color-commons-soft: #e7efe8;
+
   /* Bill stage ramp — intuitive red → green progression (like a progress bar). */
   --color-intro: #dc2626; /* introduced (just begun) */
   --color-intro-soft: #fdecec;
