@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.supabase-db-password.txt
+
+# Supabase CLI local link state
+supabase/.temp/
