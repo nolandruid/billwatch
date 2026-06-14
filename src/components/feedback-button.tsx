@@ -80,7 +80,7 @@ export function FeedbackButton() {
             ) : (
               <form onSubmit={submit} className="space-y-3">
                 <p className="text-sm text-slate-500">
-                  Bug, idea, or a bill we&apos;re tracking wrong? Tell us.
+                  Bug, idea, a bill we&apos;re tracking wrong — or just good feedback? Tell us.
                 </p>
                 <div>
                   <textarea
@@ -89,7 +89,7 @@ export function FeedbackButton() {
                     rows={4}
                     required
                     maxLength={300}
-                    placeholder="Enter feedback here"
+                    placeholder="Type your feedback here…"
                     className="focus:border-brand focus:ring-brand/20 w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2"
                   />
                   <p className="mt-1 text-right text-xs text-slate-400">{message.length}/300</p>
@@ -98,7 +98,7 @@ export function FeedbackButton() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="example@example.com (optional)"
+                  placeholder="Your email here (optional)"
                   className="focus:border-brand focus:ring-brand/20 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2"
                 />
                 {status === "error" && (
