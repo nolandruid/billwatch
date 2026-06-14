@@ -3,8 +3,8 @@
  *
  * LEGISinfo gives us a sponsor's name but no photo. We assemble photos from two official-ish
  * sources and merge them into one name → photo map:
- *   - openparliament.ca — a photo for (nearly) every sitting MP.
- *   - sencanada.ca — the Senate's own portraits, for Senators (whom openparliament omits).
+ *   - openparliament.ca, a photo for (nearly) every sitting MP.
+ *   - sencanada.ca, the Senate's own portraits, for Senators (whom openparliament omits).
  * Sponsors are looked up by a normalized name key; anyone we still can't match falls back to
  * an initials avatar.
  *
@@ -16,7 +16,7 @@
 const OP_BASE = "https://openparliament.ca";
 const OP_API = "https://api.openparliament.ca";
 const SEN_BASE = "https://sencanada.ca";
-/** Bulk "senator tiles" partial — every senator with portrait + slug in one response. */
+/** Bulk "senator tiles" partial, every senator with portrait + slug in one response. */
 const SEN_ENDPOINT = `${SEN_BASE}/umbraco/surface/SenatorsAjax/GetSenators?displayFor=senatorstiles`;
 const USER_AGENT = "BillWatch/0.1 (+https://billwatch.ca)";
 const CACHE_SECONDS = 86_400; // 1 day
@@ -74,7 +74,7 @@ function indexPhoto(map: Map<string, string>, name: string, url: string): void {
 /**
  * Recover a senator's "Firstname Lastname" from their profile slug and portrait filename.
  * The slug is `lastname-firstname` (either part may itself be hyphenated), and the portrait
- * is `sen_pho_{lastname}_official.jpg` — so the filename tells us exactly where the surname
+ * is `sen_pho_{lastname}_official.jpg`, so the filename tells us exactly where the surname
  * ends and the given name begins (e.g. slug `laboucane-benson-patti` + `…laboucane-benson…`
  * → "patti laboucane-benson").
  */
@@ -110,14 +110,14 @@ async function addMpPhotos(map: Map<string, string>): Promise<void> {
       }
     }
   } catch {
-    // Network/parse error — leave the map as-is.
+    // Network/parse error, leave the map as-is.
   }
 }
 
 /**
  * Fetch the Senate's senator portraits into the map. The bulk "tiles" partial renders each
- * senator as a photo anchor — `<a href="/en/senators/{slug}/"><img … src="/media/…/sen_pho_
- * {lastname}_official.jpg">` — so we pull (slug, portrait) pairs and reconstruct the name from
+ * senator as a photo anchor, `<a href="/en/senators/{slug}/"><img … src="/media/…/sen_pho_
+ * {lastname}_official.jpg">`, so we pull (slug, portrait) pairs and reconstruct the name from
  * the slug + filename. (Most tiles omit a text name, so we don't rely on one.)
  */
 async function addSenatorPhotos(map: Map<string, string>): Promise<void> {
@@ -147,7 +147,7 @@ async function addSenatorPhotos(map: Map<string, string>): Promise<void> {
       if (spaced !== name) indexPhoto(map, spaced, url);
     }
   } catch {
-    // Network/parse error — leave the map as-is.
+    // Network/parse error, leave the map as-is.
   }
 }
 
@@ -166,7 +166,7 @@ export async function fetchSponsorPhotoMap(): Promise<Map<string, string>> {
 
 /**
  * Hand-curated aliases for the rare cases where a sponsor's LEGISinfo name and their photo
- * source's name are unambiguously the same person but don't normalize to the same key —
+ * source's name are unambiguously the same person but don't normalize to the same key ,
  * a nickname or a since-changed surname. Keyed by sponsorKey(LEGISinfo name) → the name to
  * look up in the photo map instead.
  */

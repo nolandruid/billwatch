@@ -19,7 +19,7 @@
   --color-mauve-soft: #ece8eb;
   --color-mauve-deep: #6e5a6b;
 
-  /* Bright accent — the energy/pop colour (CTAs, highlights, links).
+  /* Bright accent, the energy/pop colour (CTAs, highlights, links).
      Named "cerise" to avoid colliding with shadcn's semantic --color-accent. */
   --color-cerise: #d6336c; /* vivid raspberry */
   --color-cerise-dark: #b5285a;
@@ -31,11 +31,11 @@
   --color-senate: #6e5a6b; /* Senate (muted plum) */
   --color-senate-soft: #ece7eb;
 
-  /* The deep green of the House of Commons chamber — used for the masthead ribbon. */
+  /* The deep green of the House of Commons chamber, used for the masthead ribbon. */
   --color-commons: #265c3a;
   --color-commons-soft: #e7efe8;
 
-  /* Bill stage ramp — intuitive red → green progression (like a progress bar). */
+  /* Bill stage ramp, intuitive red → green progression (like a progress bar). */
   --color-intro: #dc2626; /* introduced (just begun) */
   --color-intro-soft: #fdecec;
   --color-second: #f97316; /* second reading */
@@ -179,7 +179,7 @@ body {
   background-size: 22px 22px;
 }
 
-/* Staggered reveal on load — one orchestrated entrance, not scattered fidgets. */
+/* Staggered reveal on load, one orchestrated entrance, not scattered fidgets. */
 @keyframes op-rise {
   from {
     opacity: 0;

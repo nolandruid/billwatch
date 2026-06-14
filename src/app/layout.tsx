@@ -25,7 +25,7 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BillWatch — Track Canadian federal bills",
+  title: "BillWatch: Track Canadian federal bills",
   description:
     "Get notified when a Canadian federal bill changes status. Free, open-source, neutral. Data from LEGISinfo.",
 };

@@ -30,9 +30,9 @@ const STAGE_DOT: Record<string, string> = {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const bill = await findBillBySlug(CURRENT_SESSION, slug).catch(() => null);
-  if (!bill) return { title: "Bill not found — BillWatch" };
+  if (!bill) return { title: "Bill not found | BillWatch" };
   return {
-    title: `${bill.billNumber} — ${bill.shortTitle ?? bill.title} | BillWatch`,
+    title: `${bill.billNumber}: ${bill.shortTitle ?? bill.title} | BillWatch`,
     description: bill.title,
   };
 }

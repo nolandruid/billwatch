@@ -80,7 +80,7 @@ export function FeedbackButton() {
             ) : (
               <form onSubmit={submit} className="space-y-3">
                 <p className="text-sm text-slate-500">
-                  Bug, idea, a bill we&apos;re tracking wrong — or just good feedback? Tell us.
+                  Bug, idea, a bill we&apos;re tracking wrong, or just good feedback? Tell us.
                 </p>
                 <div>
                   <textarea

@@ -5,7 +5,7 @@ import { Bell, Check } from "lucide-react";
 
 /**
  * "Notify me" as an inline dialog: clicking the trigger opens a small modal that asks for an
- * email right there — no navigation to the bill page. The full double-opt-in flow lands once
+ * email right there, no navigation to the bill page. The full double-opt-in flow lands once
  * /api/subscribe is wired; for now this captures intent and confirms.
  */
 export function NotifyDialog({
@@ -74,7 +74,7 @@ export function NotifyDialog({
               <div className="text-foreground/80 mt-4 flex items-start gap-2 text-sm">
                 <Check className="text-cerise mt-0.5 h-4 w-4 shrink-0" />
                 <p>
-                  Thanks — we&apos;ll email you the moment{" "}
+                  Thanks! We&apos;ll email you the moment{" "}
                   <span className="font-semibold">{billNumber}</span> changes status. (Confirmation
                   email lands once notifications go live.)
                 </p>
@@ -84,7 +84,7 @@ export function NotifyDialog({
                 <p className="text-foreground/65 mt-2 text-sm leading-relaxed">
                   We&apos;ll email you each time{" "}
                   <span className="text-foreground font-semibold">{billNumber}</span> advances a
-                  stage — first reading, committee, chamber to chamber, Royal Assent.
+                  stage: first reading, committee, chamber to chamber, Royal Assent.
                 </p>
                 <form onSubmit={submit} className="mt-4 space-y-2">
                   <input

@@ -3,7 +3,7 @@ import { syncAll } from "@/lib/sync";
 
 /**
  * Cron-triggered sync. Pulls the latest bill data from LEGISinfo, detects status changes,
- * and queues notifications. Protected by CRON_SECRET — never call this unauthenticated.
+ * and queues notifications. Protected by CRON_SECRET, never call this unauthenticated.
  *
  * Vercel Cron invokes this via GET with `Authorization: Bearer <CRON_SECRET>`.
  */
