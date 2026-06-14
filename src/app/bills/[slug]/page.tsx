@@ -51,8 +51,8 @@ export default async function BillPage({ params }: { params: Promise<{ slug: str
 
   const photoUrl = photoForSponsor(photoMap, bill.sponsor);
   const sponsor = sponsorPerson;
-  // Newest first, so the latest milestone is at the top (no scrolling to find it).
-  const timeline = bill.progress.filter((s) => s.date).reverse();
+  // Chronological (oldest first), so it reads top-to-bottom like the horizontal progress bar.
+  const timeline = bill.progress.filter((s) => s.date);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -104,32 +104,54 @@ export default async function BillPage({ params }: { params: Promise<{ slug: str
         </div>
       </section>
 
-      <div className="mt-8 grid gap-6 sm:grid-cols-5">
-        {/* Sponsor */}
-        <section className="op-rise sm:col-span-3" style={{ animationDelay: "120ms" }}>
-          <h2 className="text-brand font-mono text-sm font-semibold tracking-[0.15em] uppercase">
-            Sponsor
-          </h2>
-          <div className="bg-card mt-4 flex items-start gap-4 rounded-2xl border border-slate-200 p-5">
-            <SponsorAvatar
-              name={bill.sponsor}
-              photoUrl={photoUrl}
-              chamber={bill.chamber}
-              className="h-16 w-16 shrink-0"
-            />
-            <div className="min-w-0">
-              <p className="text-foreground font-semibold">{bill.sponsor ?? "Not specified"}</p>
-              {sponsor?.title && (
-                <p className="text-foreground/70 mt-0.5 text-sm">{sponsor.title}</p>
-              )}
-              {sponsor?.constituency && (
-                <p className="text-foreground/50 mt-0.5 text-sm">{sponsor.constituency}</p>
-              )}
+      <div className="mt-8 grid gap-6 sm:grid-cols-5 sm:items-start">
+        {/* Left column: sponsor + timeline, so the timeline fills the space beside the
+            taller subscribe card instead of leaving a gap. */}
+        <div className="space-y-8 sm:col-span-3">
+          <section className="op-rise" style={{ animationDelay: "120ms" }}>
+            <h2 className="text-brand font-mono text-sm font-semibold tracking-[0.15em] uppercase">
+              Sponsor
+            </h2>
+            <div className="bg-card mt-4 flex items-start gap-4 rounded-2xl border border-slate-200 p-5">
+              <SponsorAvatar
+                name={bill.sponsor}
+                photoUrl={photoUrl}
+                chamber={bill.chamber}
+                className="h-16 w-16 shrink-0"
+              />
+              <div className="min-w-0">
+                <p className="text-foreground font-semibold">{bill.sponsor ?? "Not specified"}</p>
+                {sponsor?.title && (
+                  <p className="text-foreground/70 mt-0.5 text-sm">{sponsor.title}</p>
+                )}
+                {sponsor?.constituency && (
+                  <p className="text-foreground/50 mt-0.5 text-sm">{sponsor.constituency}</p>
+                )}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Subscribe */}
+          {timeline.length > 0 && (
+            <section className="op-rise" style={{ animationDelay: "200ms" }}>
+              <h2 className="text-brand font-mono text-sm font-semibold tracking-[0.15em] uppercase">
+                Timeline
+              </h2>
+              <ol className="border-brand/15 mt-4 space-y-3 border-l-2 pl-5">
+                {timeline.map((step) => (
+                  <li key={step.key} className="relative">
+                    <span
+                      className={`${STAGE_DOT[step.key] ?? "bg-brand"} ring-background absolute top-1.5 -left-[1.5rem] h-2.5 w-2.5 rounded-full ring-4`}
+                    />
+                    <p className="text-foreground font-medium">{step.label}</p>
+                    <p className="text-foreground/50 text-sm">{formatDate(step.date)}</p>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+        </div>
+
+        {/* Track it */}
         <section className="op-rise sm:col-span-2" style={{ animationDelay: "160ms" }}>
           <h2 className="text-brand font-mono text-sm font-semibold tracking-[0.15em] uppercase">
             Track it
@@ -139,26 +161,6 @@ export default async function BillPage({ params }: { params: Promise<{ slug: str
           </div>
         </section>
       </div>
-
-      {/* Timeline */}
-      {timeline.length > 0 && (
-        <section className="op-rise mt-8" style={{ animationDelay: "200ms" }}>
-          <h2 className="text-brand font-mono text-sm font-semibold tracking-[0.15em] uppercase">
-            Timeline
-          </h2>
-          <ol className="border-brand/15 mt-4 space-y-3 border-l-2 pl-5">
-            {timeline.map((step) => (
-              <li key={step.key} className="relative">
-                <span
-                  className={`${STAGE_DOT[step.key] ?? "bg-brand"} ring-background absolute top-1.5 -left-[1.5rem] h-2.5 w-2.5 rounded-full ring-4`}
-                />
-                <p className="text-foreground font-medium">{step.label}</p>
-                <p className="text-foreground/50 text-sm">{formatDate(step.date)}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
     </div>
   );
 }
