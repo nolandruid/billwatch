@@ -16,6 +16,16 @@ const LEGEND: { label: string; dot: string }[] = [
 
 type SortKey = "recent" | "number" | "progress";
 type ChamberFilter = "all" | Chamber;
+type StatusFilter = "all" | "proposed" | "active" | "passed" | "died";
+
+/** Bucket a bill into a coarse lifecycle stage for the status filter. */
+function statusCategory(item: BillListItem): Exclude<StatusFilter, "all"> {
+  const s = (item.currentStatus ?? "").toLowerCase();
+  if (s.includes("royal assent") || item.stageIndex >= 4) return "passed";
+  if (s.includes("defeated") || s.includes("not proceed") || s.includes("withdrawn")) return "died";
+  // Past its first chamber = actively moving; only introduced = still just proposed.
+  return item.stageIndex >= 2 ? "active" : "proposed";
+}
 
 function billNumberValue(billNumber: string): [string, number] {
   const [prefix, num] = billNumber.split("-");
@@ -40,6 +50,7 @@ export function BillSearch({ bills }: { bills: BillListItem[] }) {
   const [sort, setSort] = useState<SortKey>("recent");
   const [chamber, setChamber] = useState<ChamberFilter>("all");
   const [sponsor, setSponsor] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   // Unique sponsors, sorted by (normalized) name for the dropdown.
   const sponsors = useMemo(() => {
@@ -53,6 +64,7 @@ export function BillSearch({ bills }: { bills: BillListItem[] }) {
     const result = bills.filter((b) => {
       if (chamber !== "all" && b.chamber !== chamber) return false;
       if (sponsor !== "all" && b.sponsor !== sponsor) return false;
+      if (statusFilter !== "all" && statusCategory(b) !== statusFilter) return false;
       if (!q) return true;
       const num = b.billNumber.toLowerCase();
       return (
@@ -64,7 +76,7 @@ export function BillSearch({ bills }: { bills: BillListItem[] }) {
       );
     });
     return result.sort((a, b) => compareBills(a, b, sort));
-  }, [bills, query, sort, chamber, sponsor]);
+  }, [bills, query, sort, chamber, sponsor, statusFilter]);
 
   const selectClass =
     "rounded-md border border-mauve-deep/20 bg-card px-2.5 py-1.5 text-sm text-foreground shadow-sm outline-none focus:border-brand";
@@ -108,6 +120,20 @@ export function BillSearch({ bills }: { bills: BillListItem[] }) {
 
         <div className="flex flex-wrap items-center gap-2">
           <label className="text-foreground/50 flex items-center gap-1.5 text-xs">
+            Status
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+              className={selectClass}
+            >
+              <option value="all">All statuses</option>
+              <option value="proposed">Proposed</option>
+              <option value="active">In progress</option>
+              <option value="passed">Passed</option>
+              <option value="died">Died</option>
+            </select>
+          </label>
+          <label className="text-foreground/50 flex items-center gap-1.5 text-xs">
             Sponsor
             <select
               value={sponsor}
@@ -140,7 +166,7 @@ export function BillSearch({ bills }: { bills: BillListItem[] }) {
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-foreground/60 text-sm">
           <span className="text-foreground font-semibold">{filtered.length}</span>
-          {query.trim() || chamber !== "all" || sponsor !== "all"
+          {query.trim() || chamber !== "all" || sponsor !== "all" || statusFilter !== "all"
             ? " bills match"
             : " bills in the 45th Parliament, 1st session"}
         </p>
