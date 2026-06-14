@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Public Supabase client for server-side reads of *public* data (bills, history). Uses the
- * anon key and is bound by Row Level Security, so it can only see what RLS exposes — never
+ * anon key and is bound by Row Level Security, so it can only see what RLS exposes, never
  * subscriber tables. Safe to use from server components and route handlers.
  */
 export function createPublicClient(): SupabaseClient {

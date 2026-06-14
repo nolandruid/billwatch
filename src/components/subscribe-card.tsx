@@ -51,7 +51,7 @@ export function SubscribeCard({ billNumber }: { billNumber: string }) {
         ) : (
           <>
             <p className="mt-2 text-sm leading-relaxed text-white/75">
-              We&apos;ll email you each time {billNumber} advances a stage — first reading,
+              We&apos;ll email you each time {billNumber} advances a stage: first reading,
               committee, chamber to chamber, Royal Assent.
             </p>
             <form onSubmit={submit} className="mt-4 space-y-2">

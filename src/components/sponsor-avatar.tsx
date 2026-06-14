@@ -15,7 +15,7 @@ export function SponsorAvatar({
   className?: string;
 }) {
   const label = name ?? "Unknown sponsor";
-  // Fallback (no photo — typically Senators) is coloured by chamber so it looks deliberate.
+  // Fallback (no photo, typically Senators) is coloured by chamber so it looks deliberate.
   const fallbackTone =
     chamber === "senate"
       ? "bg-senate-soft text-senate"

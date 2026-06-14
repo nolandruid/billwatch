@@ -3,7 +3,7 @@
  *
  * LEGISinfo is the Parliament of Canada's official bill-tracking service and our single
  * source of truth for federal bill data. It exposes per-search and per-bill JSON exports.
- * This module is the ONLY place that knows LEGISinfo's response shape — if their format
+ * This module is the ONLY place that knows LEGISinfo's response shape, if their format
  * changes, fix it here and nothing else should need to change.
  *
  * Endpoints (no auth, no documented rate limits; tech contact: infonet@parl.gc.ca):
@@ -118,7 +118,7 @@ export interface BillListItem {
   progress: ProgressStep[];
   photoUrl: string | null;
   activityDate: string | null;
-  /** Number of completed progress steps — used for "furthest along" sorting. */
+  /** Number of completed progress steps, used for "furthest along" sorting. */
   stageIndex: number;
 }
 
@@ -274,7 +274,7 @@ export async function fetchBills(parlSessionCode: string): Promise<NormalizedBil
 
 /**
  * Find a single bill by its number slug (e.g. "c-15") within a session, using the LIST
- * endpoint — which carries the full milestone/progress data the per-bill endpoint lacks.
+ * endpoint, which carries the full milestone/progress data the per-bill endpoint lacks.
  */
 export async function findBillBySlug(
   parlSessionCode: string,

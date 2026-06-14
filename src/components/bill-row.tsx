@@ -14,8 +14,8 @@ function formatActivity(date: string | null): string | null {
 }
 
 /**
- * Compact bill card (several per row). The whole card is a click target — a stretched
- * overlay link covers it — while the "Notify me" CTA sits above the overlay on its own z-layer.
+ * Compact bill card (several per row). The whole card is a click target, a stretched
+ * overlay link covers it, while the "Notify me" CTA sits above the overlay on its own z-layer.
  */
 export function BillRow({ item }: { item: BillListItem }) {
   const href = `/bills/${item.slug}`;

@@ -69,7 +69,7 @@ export default async function Home() {
             style={{ animationDelay: "160ms" }}
           >
             Stop refreshing Parliament&apos;s website. Find a federal bill, subscribe with your
-            email, and we&apos;ll tell you each time it advances — first reading, committee,
+            email, and we&apos;ll tell you each time it advances: first reading, committee,
             House&nbsp;→&nbsp;Senate, Royal&nbsp;Assent.
           </p>
           {lastUpdated && (
