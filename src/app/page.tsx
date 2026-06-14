@@ -66,7 +66,7 @@ export default async function Home() {
   return (
     <div>
       <section className="border-brand/10 border-b">
-        <div className="mx-auto max-w-3xl px-4 pt-16 pb-12 text-center">
+        <div className="mx-auto max-w-3xl px-4 pt-8 pb-12 text-center">
           <p
             className="op-rise text-cerise/80 font-mono text-xs tracking-[0.25em] uppercase"
             style={{ animationDelay: "0ms" }}
