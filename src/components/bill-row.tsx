@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SponsorAvatar } from "@/components/sponsor-avatar";
 import { StatusBadge, stageMeta } from "@/components/status-badge";
 import { ProgressTracker } from "@/components/progress-tracker";
+import { NotifyDialog } from "@/components/notify-dialog";
 import { chamberLabel } from "@/lib/legisinfo";
 import type { BillListItem } from "@/lib/legisinfo";
 
@@ -73,12 +74,11 @@ export function BillRow({ item }: { item: BillListItem }) {
 
       <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
         <span className="text-xs text-slate-400">{activity ? `Updated ${activity}` : " "}</span>
-        <Link
-          href={href}
-          className="bg-cerise hover:bg-cerise-dark relative z-10 inline-flex shrink-0 items-center rounded-md px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition"
-        >
-          Notify me
-        </Link>
+        {/* z-10 lifts the trigger above the stretched card link so it opens the dialog
+            instead of navigating to the bill page. */}
+        <div className="relative z-10">
+          <NotifyDialog billNumber={item.billNumber} />
+        </div>
       </div>
 
       {/* Stretched overlay: clicking anywhere on the card opens the bill */}
