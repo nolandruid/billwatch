@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
-import { findBillBySlug, fetchSponsorPerson, chamberLabel } from "@/lib/legisinfo";
+import { fetchSponsorPerson, chamberLabel } from "@/lib/legisinfo";
+import { getBillBySlug } from "@/lib/bills-store";
 import { fetchSponsorPhotoMap, photoForSponsor } from "@/lib/sponsors";
 import { SponsorAvatar } from "@/components/sponsor-avatar";
 import { StatusBadge } from "@/components/status-badge";
@@ -29,7 +30,7 @@ const STAGE_DOT: Record<string, string> = {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const bill = await findBillBySlug(CURRENT_SESSION, slug).catch(() => null);
+  const bill = await getBillBySlug(slug);
   if (!bill) return { title: "Bill not found | BillWatch" };
   return {
     title: `${bill.billNumber}: ${bill.shortTitle ?? bill.title} | BillWatch`,
@@ -41,7 +42,7 @@ export default async function BillPage({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
 
   const [bill, photoMap, sponsorPerson] = await Promise.all([
-    findBillBySlug(CURRENT_SESSION, slug).catch(() => null),
+    getBillBySlug(slug),
     fetchSponsorPhotoMap(),
     fetchSponsorPerson(CURRENT_SESSION, slug).catch(() => null),
   ]);

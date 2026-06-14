@@ -33,3 +33,24 @@ export async function getBillsSnapshot(): Promise<BillsSnapshot> {
     return { bills: [], lastSyncedAt: null };
   }
 }
+
+/**
+ * Look up a single bill from Supabase by its number slug (e.g. "c-25"), re-derived from the
+ * stored raw LEGISinfo record. Returns null if not found or on error so the page can 404
+ * gracefully. Reading from our mirror keeps bill pages up even if LEGISinfo is down.
+ */
+export async function getBillBySlug(slug: string): Promise<NormalizedBill | null> {
+  try {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase
+      .from("bills")
+      .select("source_json")
+      .ilike("bill_number", slug) // bill_number is stored "C-25"; the slug is "c-25"
+      .limit(1)
+      .maybeSingle();
+    if (error || !data?.source_json) return null;
+    return normalizeBill(data.source_json as LegisinfoBillSummary);
+  } catch {
+    return null;
+  }
+}
