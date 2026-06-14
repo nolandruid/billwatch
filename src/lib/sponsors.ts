@@ -164,11 +164,26 @@ export async function fetchSponsorPhotoMap(): Promise<Map<string, string>> {
   return map;
 }
 
+/**
+ * Hand-curated aliases for the rare cases where a sponsor's LEGISinfo name and their photo
+ * source's name are unambiguously the same person but don't normalize to the same key —
+ * a nickname or a since-changed surname. Keyed by sponsorKey(LEGISinfo name) → the name to
+ * look up in the photo map instead.
+ */
+const NAME_ALIASES: Record<string, string> = {
+  "martin klyne": "marty klyne", // Senate site lists him as "Marty"
+  "michelle rempel garner": "michelle rempel", // openparliament hasn't added "Garner"
+};
+
 /** Look up a sponsor's photo URL in the map, or null if not found. */
 export function photoForSponsor(
   map: Map<string, string>,
   sponsorName: string | null | undefined,
 ): string | null {
   if (!sponsorName) return null;
-  return map.get(sponsorKey(sponsorName)) ?? map.get(firstLastKey(sponsorName)) ?? null;
+  const direct = map.get(sponsorKey(sponsorName)) ?? map.get(firstLastKey(sponsorName));
+  if (direct) return direct;
+  const alias = NAME_ALIASES[sponsorKey(sponsorName)];
+  if (alias) return map.get(sponsorKey(alias)) ?? map.get(firstLastKey(alias)) ?? null;
+  return null;
 }
