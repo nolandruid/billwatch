@@ -6,10 +6,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-20">
       <div className="bg-brand text-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="bg-mauve/25 font-display ring-mauve/30 flex h-7 w-7 items-center justify-center rounded-md text-base font-bold ring-1">
-              B
-            </span>
+          <Link href="/" className="flex items-center">
             <span className="font-display text-2xl leading-none font-semibold tracking-tight">
               BillWatch
             </span>
