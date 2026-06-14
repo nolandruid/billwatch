@@ -158,21 +158,6 @@ export default async function BillPage({ params }: { params: Promise<{ slug: str
         </section>
       )}
 
-      {/* Source */}
-      <footer className="mt-10 border-t border-slate-200 pt-5">
-        <p className="text-foreground/40 text-xs">
-          Source:{" "}
-          <a
-            href={bill.legisinfoUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="hover:text-brand underline"
-          >
-            LEGISinfo, Parliament of Canada
-          </a>
-          . BillWatch is independent and not affiliated with the Government of Canada.
-        </p>
-      </footer>
     </div>
   );
 }
