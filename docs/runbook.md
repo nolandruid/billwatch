@@ -16,7 +16,7 @@ values; only `.env.example` is tracked.
 | `SUPABASE_SERVICE_ROLE_KEY`     | server only       | Bypasses RLS. Keep secret.         |
 | `RESEND_API_KEY`                | notifier (server) | Email delivery.                    |
 | `CRON_SECRET`                   | cron route        | Bearer token guarding `/api/cron/*`. |
-| `DISCORD_FEEDBACK_WEBHOOK_URL`  | feedback (server) | Server-only; never client-exposed. |
+| `NEXT_PUBLIC_TALLY_FORM_ID`     | feedback (client) | Public Tally form id; opens the feedback popup. |
 | `NEXT_PUBLIC_SITE_URL`          | email links       | Public base URL.                   |
 
 ## The sync job
