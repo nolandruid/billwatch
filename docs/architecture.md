@@ -19,9 +19,9 @@ changes), and the **notifier** (sends emails).
         ┌────────────────────────┼─────────────────────────┐
         │                        │                          │
  ┌──────▼──────┐         ┌───────▼────────┐         ┌───────▼────────┐
- │ Next.js web │         │ Notifier       │         │ Feedback proxy │
- │ search/sub  │         │ outbox → email │         │ /api/feedback  │
- │ bill pages  │         │ (Resend)       │         │ → Discord      │
+ │ Next.js web │         │ Notifier       │         │ Feedback       │
+ │ search/sub  │         │ outbox → email │         │ Tally popup    │
+ │ bill pages  │         │ (Resend)       │         │ (hosted form)  │
  └─────────────┘         └────────────────┘         └────────────────┘
 ```
 
