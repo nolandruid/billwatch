@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail, siteUrl } from "@/lib/resend";
-import { confirmationEmail, subscribedEmail } from "@/lib/emails";
+import { confirmationEmail, ownerSignupAlert, subscribedEmail } from "@/lib/emails";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -105,9 +105,55 @@ export async function confirmSubscriber(
     .from("subscribers")
     .update({ confirmed: true, confirmed_at: new Date().toISOString() })
     .eq("confirm_token", token)
-    .select("id")
+    .select("id, email")
     .maybeSingle();
-  return { ok: !error && !!data };
+  const ok = !error && !!data;
+
+  if (ok && data) {
+    // Fire-and-forget: the owner alert is a convenience. A subscriber who has
+    // just clicked their confirmation link must see success regardless of
+    // whether this send works, so failures are caught and logged, never thrown.
+    try {
+      await notifyOwnerOfSignup(supabase, data.id, data.email);
+    } catch (err) {
+      console.error("[subscriptions] owner alert failed; confirmation kept", err);
+    }
+  }
+
+  return { ok };
+}
+
+/**
+ * Emails the owner that a subscriber confirmed. Alerts only on confirmation,
+ * not on the initial signup: unconfirmed addresses are frequently typos or
+ * abandoned, so alerting there would overstate real growth.
+ */
+async function notifyOwnerOfSignup(
+  supabase: SupabaseClient,
+  subscriberId: string,
+  email: string,
+): Promise<void> {
+  const owner = process.env.OWNER_NOTIFY_EMAIL;
+  if (!owner) return;
+
+  const { data } = await supabase
+    .from("subscriptions")
+    .select("bills(bill_number, title)")
+    .eq("subscriber_id", subscriberId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const bill = (data as { bills?: { bill_number?: string; title?: string } } | null)?.bills;
+
+  await sendEmail({
+    to: owner,
+    ...ownerSignupAlert({
+      email,
+      billNumber: bill?.bill_number ?? "a bill",
+      billTitle: bill?.title ?? "",
+    }),
+  });
 }
 
 /** One-click unsubscribe: delete the subscriber (cascades to subscriptions + outbox). */

@@ -103,6 +103,24 @@ BillWatch is independent and not affiliated with the Government of Canada.`;
   return { subject, html, text };
 }
 
+/**
+ * Tells the site owner a subscriber confirmed. Deliberately plain text and
+ * unstyled: it is an internal signal, not a customer-facing email.
+ */
+export function ownerSignupAlert(opts: { email: string; billNumber: string; billTitle: string }): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const { email, billNumber, billTitle } = opts;
+  const subject = `New BillWatch subscriber: ${billNumber}`;
+  const text = `${email} confirmed and is now tracking ${billNumber}.\n\n${billTitle}`;
+  const html = `<p>${escapeHtml(email)} confirmed and is now tracking <strong>${escapeHtml(
+    billNumber,
+  )}</strong>.</p><p>${escapeHtml(billTitle)}</p>`;
+  return { subject, html, text };
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
