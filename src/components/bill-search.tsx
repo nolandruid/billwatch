@@ -178,10 +178,27 @@ export function BillSearch({ bills }: { bills: BillListItem[] }) {
         ref={listRef}
         className="mt-4 flex scroll-mt-24 flex-wrap items-center justify-between gap-3"
       >
-        <p className="text-foreground/60 text-sm">
-          <span className="text-foreground font-semibold">{filtered.length}</span>
-          {filtersActive ? " bills match" : " bills in the 45th Parliament, 1st session"}
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-foreground/60 text-sm">
+            <span className="text-foreground font-semibold">{filtered.length}</span>
+            {filtersActive ? " bills match" : " bills in the 45th Parliament, 1st session"}
+            {paged.total > paged.pageSize ? (
+              <span>
+                {" "}
+                · showing {paged.start}–{paged.end}
+              </span>
+            ) : null}
+          </p>
+          <BillPagination
+            compact
+            page={paged.page}
+            pageCount={paged.pageCount}
+            start={paged.start}
+            end={paged.end}
+            total={paged.total}
+            hrefForPage={hrefForPage}
+          />
+        </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
           {LEGEND.map((l) => (
             <span key={l.label} className="text-foreground/50 flex items-center gap-1.5 text-xs">
