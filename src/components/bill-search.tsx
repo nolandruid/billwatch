@@ -1,10 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { BillRow } from "@/components/bill-row";
-import { sponsorKey } from "@/lib/sponsors";
-import type { BillListItem, Chamber } from "@/lib/legisinfo";
+import { BillPagination } from "@/components/bill-pagination";
+import {
+  type BillListState,
+  type ChamberFilter,
+  type SortKey,
+  type StatusFilter,
+  filterAndSortBills,
+  paginate,
+  parseBillListSearchParams,
+  serializeBillListSearchParams,
+  uniqueSponsors,
+} from "@/lib/bill-list";
+import type { BillListItem } from "@/lib/legisinfo";
 
 const LEGEND: { label: string; dot: string }[] = [
   { label: "Introduced", dot: "bg-intro" },
@@ -14,69 +27,67 @@ const LEGEND: { label: string; dot: string }[] = [
   { label: "Royal Assent", dot: "bg-royal" },
 ];
 
-type SortKey = "recent" | "number" | "progress";
-type ChamberFilter = "all" | Chamber;
-type StatusFilter = "all" | "proposed" | "active" | "passed" | "died";
-
-/** Bucket a bill into a coarse lifecycle stage for the status filter. */
-function statusCategory(item: BillListItem): Exclude<StatusFilter, "all"> {
-  const s = (item.currentStatus ?? "").toLowerCase();
-  if (s.includes("royal assent") || item.stageIndex >= 4) return "passed";
-  if (s.includes("defeated") || s.includes("not proceed") || s.includes("withdrawn")) return "died";
-  // Past its first chamber = actively moving; only introduced = still just proposed.
-  return item.stageIndex >= 2 ? "active" : "proposed";
-}
-
-function billNumberValue(billNumber: string): [string, number] {
-  const [prefix, num] = billNumber.split("-");
-  return [prefix, Number(num) || 0];
-}
-
-function compareBills(a: BillListItem, b: BillListItem, sort: SortKey): number {
-  if (sort === "number") {
-    const [pa, na] = billNumberValue(a.billNumber);
-    const [pb, nb] = billNumberValue(b.billNumber);
-    return pa === pb ? na - nb : pa.localeCompare(pb);
-  }
-  if (sort === "progress") {
-    if (b.stageIndex !== a.stageIndex) return b.stageIndex - a.stageIndex;
-  }
-  // recent (and tie-breaker for progress): newest activity first.
-  return (b.activityDate ?? "").localeCompare(a.activityDate ?? "");
+export function BillSearchFallback() {
+  return (
+    <div aria-hidden>
+      <Skeleton className="bg-card h-12 w-full rounded-lg" />
+      <div className="mt-4 flex justify-between gap-3">
+        <Skeleton className="bg-card h-9 w-48 rounded-lg" />
+        <Skeleton className="bg-card h-9 w-72 rounded-lg" />
+      </div>
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }, (_, i) => (
+          <Skeleton key={i} className="bg-card h-64 rounded-2xl" />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function BillSearch({ bills }: { bills: BillListItem[] }) {
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<SortKey>("recent");
-  const [chamber, setChamber] = useState<ChamberFilter>("all");
-  const [sponsor, setSponsor] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const listRef = useRef<HTMLDivElement>(null);
 
-  // Unique sponsors, sorted by (normalized) name for the dropdown.
-  const sponsors = useMemo(() => {
-    const set = new Set(bills.map((b) => b.sponsor).filter((s): s is string => !!s));
-    return [...set].sort((a, b) => sponsorKey(a).localeCompare(sponsorKey(b)));
-  }, [bills]);
+  const parsed = useMemo(() => parseBillListSearchParams(searchParams), [searchParams]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const compact = q.replace(/[\s-]/g, "");
-    const result = bills.filter((b) => {
-      if (chamber !== "all" && b.chamber !== chamber) return false;
-      if (sponsor !== "all" && b.sponsor !== sponsor) return false;
-      if (statusFilter !== "all" && statusCategory(b) !== statusFilter) return false;
-      if (!q) return true;
-      const num = b.billNumber.toLowerCase();
-      return (
-        num.includes(q) ||
-        num.replace("-", "").includes(compact) ||
-        b.title.toLowerCase().includes(q) ||
-        (b.shortTitle?.toLowerCase().includes(q) ?? false) ||
-        (b.sponsor?.toLowerCase().includes(q) ?? false)
-      );
-    });
-    return result.sort((a, b) => compareBills(a, b, sort));
-  }, [bills, query, sort, chamber, sponsor, statusFilter]);
+  const replaceParams = useCallback(
+    (patch: Partial<BillListState>) => {
+      const next = { ...parseBillListSearchParams(searchParams), ...patch };
+      const qs = serializeBillListSearchParams(next);
+      const href = qs ? `${pathname}?${qs}` : pathname;
+      router.replace(href, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const sponsors = useMemo(() => uniqueSponsors(bills), [bills]);
+
+  const filtered = useMemo(() => filterAndSortBills(bills, parsed), [bills, parsed]);
+  const paged = useMemo(() => paginate(filtered, parsed.page), [filtered, parsed.page]);
+
+  const hrefForPage = useCallback(
+    (page: number) => {
+      const qs = serializeBillListSearchParams({ ...parsed, page });
+      return qs ? `${pathname}?${qs}` : pathname;
+    },
+    [parsed, pathname],
+  );
+
+  function setFilter(patch: Partial<BillListState>) {
+    replaceParams({ ...patch, page: 1 });
+  }
+
+  function onPageNavigate() {
+    listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  const filtersActive =
+    parsed.query.trim() ||
+    parsed.chamber !== "all" ||
+    parsed.sponsor !== "all" ||
+    parsed.status !== "all";
 
   const selectClass =
     "rounded-md border border-mauve-deep/20 bg-card px-2.5 py-1.5 text-sm text-foreground shadow-sm outline-none focus:border-brand";
@@ -85,8 +96,8 @@ export function BillSearch({ bills }: { bills: BillListItem[] }) {
     <div>
       <Input
         type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        value={parsed.query}
+        onChange={(e) => setFilter({ query: e.target.value })}
         placeholder="Search by bill number (e.g. C-15), title, topic, or sponsor…"
         className="bg-card h-12 text-base shadow-sm"
         autoFocus
@@ -106,9 +117,9 @@ export function BillSearch({ bills }: { bills: BillListItem[] }) {
             <button
               key={value}
               type="button"
-              onClick={() => setChamber(value)}
+              onClick={() => setFilter({ chamber: value as ChamberFilter })}
               className={`rounded-md px-3 py-1 font-medium transition ${
-                chamber === value
+                parsed.chamber === value
                   ? "bg-brand text-white"
                   : "text-foreground/60 hover:text-foreground"
               }`}
@@ -122,8 +133,8 @@ export function BillSearch({ bills }: { bills: BillListItem[] }) {
           <label className="text-foreground/50 flex items-center gap-1.5 text-xs">
             Status
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+              value={parsed.status}
+              onChange={(e) => setFilter({ status: e.target.value as StatusFilter })}
               className={selectClass}
             >
               <option value="all">All statuses</option>
@@ -136,8 +147,8 @@ export function BillSearch({ bills }: { bills: BillListItem[] }) {
           <label className="text-foreground/50 flex items-center gap-1.5 text-xs">
             Sponsor
             <select
-              value={sponsor}
-              onChange={(e) => setSponsor(e.target.value)}
+              value={parsed.sponsor}
+              onChange={(e) => setFilter({ sponsor: e.target.value })}
               className={selectClass}
             >
               <option value="all">All sponsors</option>
@@ -151,8 +162,8 @@ export function BillSearch({ bills }: { bills: BillListItem[] }) {
           <label className="text-foreground/50 flex items-center gap-1.5 text-xs">
             Sort
             <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
+              value={parsed.sort}
+              onChange={(e) => setFilter({ sort: e.target.value as SortKey })}
               className={selectClass}
             >
               <option value="recent">Recent activity</option>
@@ -163,12 +174,13 @@ export function BillSearch({ bills }: { bills: BillListItem[] }) {
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <div
+        ref={listRef}
+        className="mt-4 flex scroll-mt-24 flex-wrap items-center justify-between gap-3"
+      >
         <p className="text-foreground/60 text-sm">
           <span className="text-foreground font-semibold">{filtered.length}</span>
-          {query.trim() || chamber !== "all" || sponsor !== "all" || statusFilter !== "all"
-            ? " bills match"
-            : " bills in the 45th Parliament, 1st session"}
+          {filtersActive ? " bills match" : " bills in the 45th Parliament, 1st session"}
         </p>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
           {LEGEND.map((l) => (
@@ -186,11 +198,22 @@ export function BillSearch({ bills }: { bills: BillListItem[] }) {
         </div>
       ) : (
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((bill) => (
+          {paged.items.map((bill) => (
             <BillRow key={`${bill.parliament}-${bill.session}-${bill.billNumber}`} item={bill} />
           ))}
         </div>
       )}
+
+      <div onClick={onPageNavigate}>
+        <BillPagination
+          page={paged.page}
+          pageCount={paged.pageCount}
+          start={paged.start}
+          end={paged.end}
+          total={paged.total}
+          hrefForPage={hrefForPage}
+        />
+      </div>
     </div>
   );
 }

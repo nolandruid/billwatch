@@ -1,4 +1,5 @@
-import { BillSearch } from "@/components/bill-search";
+import { Suspense } from "react";
+import { BillSearch, BillSearchFallback } from "@/components/bill-search";
 import { fetchBills, toListItem, type BillListItem, type NormalizedBill } from "@/lib/legisinfo";
 import { getBillsSnapshot } from "@/lib/bills-store";
 import { fetchSponsorPhotoMap, photoForSponsor } from "@/lib/sponsors";
@@ -133,7 +134,9 @@ export default async function Home() {
             We couldn&apos;t reach LEGISinfo just now. Please refresh in a moment.
           </div>
         ) : (
-          <BillSearch bills={items} />
+          <Suspense fallback={<BillSearchFallback />}>
+            <BillSearch bills={items} />
+          </Suspense>
         )}
       </section>
     </div>
