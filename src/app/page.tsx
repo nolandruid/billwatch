@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { BillSearch, BillSearchFallback } from "@/components/bill-search";
+import { DigestSignup } from "@/components/digest-signup";
 import { fetchBills, toListItem, type BillListItem, type NormalizedBill } from "@/lib/legisinfo";
 import { getBillsSnapshot } from "@/lib/bills-store";
 import { fetchSponsorPhotoMap, photoForSponsor } from "@/lib/sponsors";
@@ -125,9 +126,13 @@ export default async function Home() {
         </div>
       </section>
 
+      <section className="op-rise mx-auto max-w-3xl px-4 pt-8" style={{ animationDelay: "240ms" }}>
+        <DigestSignup />
+      </section>
+
       <section
         className="op-rise mx-auto max-w-5xl px-4 pt-10 pb-20"
-        style={{ animationDelay: "240ms" }}
+        style={{ animationDelay: "280ms" }}
       >
         {loadError ? (
           <div className="border-intro/30 bg-intro-soft text-intro rounded-xl border p-6 text-center text-sm">

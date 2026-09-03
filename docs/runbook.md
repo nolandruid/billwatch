@@ -26,15 +26,24 @@ values; only `.env.example` is tracked.
   (UTC−4, roughly March–November). Vercel Cron is UTC-only, so the Ottawa clock
   hour shifts by one hour at the DST transitions. Chosen as an evening slot after
   5pm Ottawa so status-change emails land when people check inboxes later in the
-  day, and so a future sitting-end digest can run after typical House/Senate hours.
+  day, and so the sitting-end digest can run after typical House/Senate hours.
 - **Endpoint:** `POST`/`GET` `/api/cron/sync`, requires `Authorization: Bearer $CRON_SECRET`.
 - **What it does:** pulls each session in `ACTIVE_SESSIONS` ([`src/lib/sync.ts`](../src/lib/sync.ts)),
-  upserts bills, logs status changes, queues notifications.
+  upserts bills, logs status changes, queues per-bill notifications, drains that
+  outbox, then sends the sitting-end digest to confirmed `digest_opt_in`
+  subscribers if any bills moved that Ottawa calendar day.
 - **Run manually:**
   ```bash
   curl -X POST "$NEXT_PUBLIC_SITE_URL/api/cron/sync" -H "Authorization: Bearer $CRON_SECRET"
   ```
-  Response is JSON: `{ ok, results: [{ session, fetched, inserted, changed, notificationsQueued }] }`.
+  Response is JSON: `{ ok, results, notified, digest }`.
+
+## Database migrations
+
+Apply `supabase/migrations/` in order against the Supabase project (Studio SQL
+editor or the CLI). `0002_sitting_digest.sql` adds `subscribers.digest_opt_in`
+(default false) and `digest_outbox`. Deploy the app only after 0002 has been
+applied, or digest enqueue will fail.
 
 ## Adding a new parliamentary session
 
@@ -53,10 +62,18 @@ Check, in order: (1) is the subscriber `confirmed = true`? (2) is there a `subsc
 linking them to the bill? (3) is there a `bill_status_history` row for the change? (4) is there
 a `notifications_outbox` row, and what is its `state` / `last_error`?
 
+**A digest didn't go out.**
+Check, in order: (1) did any `bill_status_history` rows have `detected_at` on
+today's America/Toronto date? (no movement = no digest); (2) is the subscriber
+`confirmed = true` and `digest_opt_in = true`? (per-bill subscribe does not set
+this); (3) is there a `digest_outbox` row for that `sitting_date`, and what is
+its `state` / `last_error`?
+
 **Suspected duplicate or missed sync.**
-Re-running sync is safe: bill upserts are idempotent, and the
+Re-running sync is safe: bill upserts are idempotent, the
 `notifications_outbox (subscriber_id, status_history_id)` unique constraint prevents
-double-queuing.
+double-queuing, and `digest_outbox (subscriber_id, sitting_date)` prevents a second
+digest the same sitting day.
 
 **Rotating a secret.**
 Update it in Vercel, redeploy. For `CRON_SECRET`, update the Vercel Cron config too.
