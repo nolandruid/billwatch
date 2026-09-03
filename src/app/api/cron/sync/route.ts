@@ -1,10 +1,12 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncAll } from "@/lib/sync";
 import { drainOutbox } from "@/lib/notify";
+import { sendSittingDigest } from "@/lib/digest";
 
 /**
  * Cron-triggered sync + notify. Pulls the latest bill data from LEGISinfo, detects status
- * changes, queues notifications, then drains the outbox by emailing confirmed subscribers.
+ * changes, queues per-bill notifications, drains that outbox, then sends the sitting-end
+ * digest to opt-in subscribers if any bills moved today.
  * Protected by CRON_SECRET, never call this unauthenticated.
  *
  * Vercel Cron invokes this via GET with `Authorization: Bearer <CRON_SECRET>`.
@@ -28,7 +30,8 @@ async function handle(request: Request): Promise<Response> {
     const supabase = createAdminClient();
     const results = await syncAll(supabase);
     const notified = await drainOutbox(supabase);
-    return Response.json({ ok: true, results, notified });
+    const digest = await sendSittingDigest(supabase);
+    return Response.json({ ok: true, results, notified, digest });
   } catch (err) {
     console.error("[cron/sync] failed:", err);
     const message = err instanceof Error ? err.message : "Unknown error";

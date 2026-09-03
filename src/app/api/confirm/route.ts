@@ -13,8 +13,7 @@ export async function GET(request: Request) {
     return ok
       ? resultPage({
           title: "You're all set ✓",
-          message:
-            "Your email is confirmed. We'll let you know each time a bill you're tracking changes status.",
+          message: "Your email is confirmed. You'll get the BillWatch emails you subscribed to.",
         })
       : resultPage({
           title: "Link not valid",
