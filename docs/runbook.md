@@ -21,7 +21,12 @@ values; only `.env.example` is tracked.
 
 ## The sync job
 
-- **Schedule:** every 2 hours via Vercel Cron (`vercel.json`).
+- **Schedule:** daily at 23:00 UTC via Vercel Cron (`vercel.json`). That is 6:00pm
+  America/Toronto during EST (UTC−5, roughly November–March) and 7:00pm during EDT
+  (UTC−4, roughly March–November). Vercel Cron is UTC-only, so the Ottawa clock
+  hour shifts by one hour at the DST transitions. Chosen as an evening slot after
+  5pm Ottawa so status-change emails land when people check inboxes later in the
+  day, and so a future sitting-end digest can run after typical House/Senate hours.
 - **Endpoint:** `POST`/`GET` `/api/cron/sync`, requires `Authorization: Bearer $CRON_SECRET`.
 - **What it does:** pulls each session in `ACTIVE_SESSIONS` ([`src/lib/sync.ts`](../src/lib/sync.ts)),
   upserts bills, logs status changes, queues notifications.

@@ -10,7 +10,7 @@ truth** for federal bill data.
 
 All return JSON, require no authentication, and have no documented rate limits. Be a good
 citizen: send a descriptive `User-Agent`, cache where reasonable, and poll on a modest
-interval (we sync every 2 hours).
+interval (we sync once daily at 23:00 UTC).
 
 | Purpose            | URL pattern                                                      |
 | ------------------ | --------------------------------------------------------------- |

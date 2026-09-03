@@ -8,6 +8,7 @@ import { drainOutbox } from "@/lib/notify";
  * Protected by CRON_SECRET, never call this unauthenticated.
  *
  * Vercel Cron invokes this via GET with `Authorization: Bearer <CRON_SECRET>`.
+ * Schedule is `0 23 * * *` in `vercel.json` (23:00 UTC = 6pm EST / 7pm EDT Ottawa).
  */
 export const dynamic = "force-dynamic"; // always run fresh, never cache
 export const maxDuration = 60;

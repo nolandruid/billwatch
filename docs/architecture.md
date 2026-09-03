@@ -27,7 +27,7 @@ changes), and the **notifier** (sends emails).
 
 ## Data flow: detecting a status change
 
-1. **Cron** (`vercel.json` → `/api/cron/sync`, every 2h) calls `syncAll()`.
+1. **Cron** (`vercel.json` → `/api/cron/sync`, daily at 23:00 UTC) calls `syncAll()`.
 2. `fetchBills(session)` ([`src/lib/legisinfo.ts`](../src/lib/legisinfo.ts)) pulls the full
    bill list for each active session and normalizes it. One request carries status +
    milestones, so no per-bill calls are needed.
