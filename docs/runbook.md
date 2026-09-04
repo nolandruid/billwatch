@@ -35,6 +35,15 @@ values; only `.env.example` is tracked.
   curl -X POST "$NEXT_PUBLIC_SITE_URL/api/cron/sync" -H "Authorization: Bearer $CRON_SECRET"
   ```
   Response is JSON: `{ ok, results: [{ session, fetched, inserted, changed, notificationsQueued }] }`.
+- **Timing budget:** the route is capped at `maxDuration = 60` on Vercel. A `syncAll` that
+  creeps toward that cap will start 500ing in production. To check the current headroom,
+  point at a **staging** Supabase project (the test writes bills/history) and run:
+  ```bash
+  BILLWATCH_E2E=1 npm run test:e2e
+  ```
+  It times the LEGISinfo fetch and the full `syncAll`, prints fetched/inserted/changed/queued
+  counts, and fails above 45s (override with `SYNC_BUDGET_MS`). Not part of `npm test` or CI,
+  since it needs network + a live database. See [`src/lib/sync.e2e.test.ts`](../src/lib/sync.e2e.test.ts).
 
 ## Adding a new parliamentary session
 
