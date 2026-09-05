@@ -35,15 +35,21 @@ values; only `.env.example` is tracked.
   curl -X POST "$NEXT_PUBLIC_SITE_URL/api/cron/sync" -H "Authorization: Bearer $CRON_SECRET"
   ```
   Response is JSON: `{ ok, results: [{ session, fetched, inserted, changed, notificationsQueued }] }`.
-- **Timing budget:** the route is capped at `maxDuration = 60` on Vercel. A `syncAll` that
-  creeps toward that cap will start 500ing in production. To check the current headroom,
-  point at a **staging** Supabase project (the test writes bills/history) and run:
+- **Timing budget:** the route is capped at `maxDuration = 60` on Vercel, and the run gets
+  slower as the bills table grows (`syncSession` writes one row at a time). Every run times
+  itself: the JSON response and the log line carry `timing`, and if a run exceeds the 45s
+  warning budget it emails `OWNER_NOTIFY_EMAIL` and logs `[cron/sync] SLOW`. **This is
+  automatic — there is nothing to run on a schedule.** Tune with `SYNC_BUDGET_MS`.
+- **If you get a slow-sync email:** the run still succeeded, but headroom is shrinking. The
+  fix is to batch the per-bill upserts in [`src/lib/sync.ts`](../src/lib/sync.ts) instead of
+  awaiting one round trip per bill. To measure a change before shipping it, point at a
+  **staging** Supabase project (the test writes bills/history) and run:
   ```bash
   BILLWATCH_E2E=1 npm run test:e2e
   ```
-  It times the LEGISinfo fetch and the full `syncAll`, prints fetched/inserted/changed/queued
-  counts, and fails above 45s (override with `SYNC_BUDGET_MS`). Not part of `npm test` or CI,
-  since it needs network + a live database. See [`src/lib/sync.e2e.test.ts`](../src/lib/sync.e2e.test.ts).
+  It times the LEGISinfo fetch and the full `syncAll` against the same budget and prints
+  fetched/inserted/changed/queued counts. Kept out of `npm test`/CI since it needs network and
+  a live database. See [`src/lib/sync.e2e.test.ts`](../src/lib/sync.e2e.test.ts).
 
 ## Adding a new parliamentary session
 

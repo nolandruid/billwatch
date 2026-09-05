@@ -7,6 +7,10 @@
  * eat that budget silently until production cron starts 500ing. This test runs the real thing
  * and fails while there is still headroom.
  *
+ * You should not normally need this: every production run times itself against the same
+ * budget and emails OWNER_NOTIFY_EMAIL when it creeps up (see `@/lib/sync-budget`). Reach for
+ * this when you want to measure a change before shipping it.
+ *
  * It writes to whatever Supabase project the env points at, so it is opt-in and NOT part of
  * `npm test`. Point it at a staging project and run:
  *
@@ -20,9 +24,7 @@ import { describe, it, expect } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { fetchBills } from "@/lib/legisinfo";
 import { syncAll, ACTIVE_SESSIONS } from "@/lib/sync";
-
-/** Vercel kills the cron route at 60s; leave headroom so we fail before production does. */
-const BUDGET_MS = Number(process.env.SYNC_BUDGET_MS ?? 45_000);
+import { SYNC_BUDGET_MS as BUDGET_MS } from "@/lib/sync-budget";
 
 const enabled =
   process.env.BILLWATCH_E2E === "1" &&

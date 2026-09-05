@@ -121,6 +121,31 @@ export function ownerSignupAlert(opts: { email: string; billNumber: string; bill
   return { subject, html, text };
 }
 
+/**
+ * Warns the site owner that the nightly sync is creeping toward Vercel's 60s cap. Like the
+ * signup alert, this is an internal signal: plain and unstyled.
+ */
+export function ownerSlowSyncAlert(opts: {
+  elapsedMs: number;
+  budgetMs: number;
+  capMs: number;
+  percentOfCap: number;
+  fetched: number;
+}): { subject: string; html: string; text: string } {
+  const { elapsedMs, budgetMs, capMs, percentOfCap, fetched } = opts;
+  const secs = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
+  const subject = `BillWatch sync is slow: ${secs(elapsedMs)} of a ${secs(capMs)} limit`;
+  const body = [
+    `Last night's sync took ${secs(elapsedMs)} — ${percentOfCap}% of the ${secs(capMs)} Vercel cap, over the ${secs(budgetMs)} warning budget.`,
+    `It synced ${fetched} bills.`,
+    `Nothing is broken yet: the run finished. But if it crosses ${secs(capMs)} Vercel will kill it mid-run and no status emails will go out.`,
+    `Most likely cause: the bills table has grown and syncSession writes one row at a time. Batching those writes is the fix.`,
+  ];
+  const text = body.join("\n\n");
+  const html = body.map((p) => `<p>${escapeHtml(p)}</p>`).join("");
+  return { subject, html, text };
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
