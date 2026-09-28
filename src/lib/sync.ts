@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { fetchBills, type NormalizedBill } from "@/lib/legisinfo";
+import { fetchBillsWithDetails, type NormalizedBill } from "@/lib/legisinfo";
 
 /** Sessions to sync. Add new sessions here as Parliament opens them. */
 export const ACTIVE_SESSIONS = ["45-1"];
@@ -19,6 +19,9 @@ interface ExistingBill {
   session: number;
   current_status: string | null;
   current_stage: string | null;
+  sponsor: string | null;
+  /** Set only when source_json is in LEGISinfo's current record shape. */
+  number_code: string | null;
 }
 
 function key(parliament: number, session: number, billNumber: string): string {
@@ -27,7 +30,7 @@ function key(parliament: number, session: number, billNumber: string): string {
 
 /**
  * Sync one parliamentary session from LEGISinfo:
- *   1. Fetch all bills (one request carries status + milestones).
+ *   1. Fetch all bills (the list, then each bill's full record for sponsor + activity).
  *   2. Upsert each into `bills`.
  *   3. For bills whose status/stage changed since we last saw them, append a
  *      `bill_status_history` row and enqueue notifications for confirmed subscribers.
@@ -38,11 +41,13 @@ export async function syncSession(
   supabase: SupabaseClient,
   parlSessionCode: string,
 ): Promise<SyncResult> {
-  const bills = await fetchBills(parlSessionCode);
+  const bills = await fetchBillsWithDetails(parlSessionCode);
 
   const { data: existingRows, error: existingErr } = await supabase
     .from("bills")
-    .select("id, bill_number, parliament, session, current_status, current_stage");
+    .select(
+      "id, bill_number, parliament, session, current_status, current_stage, sponsor, number_code:source_json->>NumberCode",
+    );
   if (existingErr) throw new Error(`Failed to load existing bills: ${existingErr.message}`);
 
   const existingByKey = new Map<string, ExistingBill>();
@@ -61,12 +66,19 @@ export async function syncSession(
   for (const bill of bills) {
     const existing = existingByKey.get(key(bill.parliament, bill.session, bill.billNumber));
     const isNew = !existing;
+    // Rows stored before LEGISinfo's August 2026 schema switch hold stage text from a
+    // different field, so only compare stage once both sides come from the same shape.
+    // Otherwise a wording difference would email every subscriber about every bill.
+    const sameShape = !!existing?.number_code;
     const statusChanged =
       !!existing &&
       (existing.current_status !== bill.currentStatus ||
-        existing.current_stage !== bill.currentStage);
+        (sameShape && existing.current_stage !== bill.currentStage));
 
-    const billId = await upsertBill(supabase, bill);
+    // If a bill's detail request failed its record has no sponsor; keep the one we have.
+    const sponsor = bill.sponsor ?? existing?.sponsor ?? null;
+
+    const billId = await upsertBill(supabase, { ...bill, sponsor });
 
     if (isNew) {
       result.inserted += 1;

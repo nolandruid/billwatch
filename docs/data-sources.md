@@ -24,9 +24,20 @@ that is the only file to update.
 
 ### Fields we depend on
 
-`BillNumberFormatted`, `ParliamentNumber`, `SessionNumber`, `ParlSessionCode`, `LongTitleEn`,
-`ShortTitleEn`, `SponsorEn`, `OriginatingChamberId`, `CurrentStatusId`, `CurrentStatusEn`,
-`LatestCompletedMajorStageEn`, `LatestCompletedMajorStageChamberId`, `LatestActivityDateTime`.
+In August 2026 LEGISinfo switched the session list to the same record shape as the
+single-bill endpoint. We read `NumberCode`, `ParliamentNumber`, `SessionNumber`,
+`LongTitleEn`, `ShortTitleEn`, `BillDocumentTypeNameEn`, `OriginatingChamberOrganizationId`,
+`StatusId`, `StatusNameEn`, `LatestCompletedMajorStageNameEn`,
+`LatestCompletedMajorStageChamberOrganizationId`, `LatestBillEventDateTime`, the `Passed*`
+milestone timestamps and the `SponsorPerson*` fields.
+
+The list version leaves sponsor fields blank and `LatestBillEventDateTime` at a
+`0001-01-01T00:00:00` placeholder, so the sync job also fetches each bill's single-bill
+record (4 at a time, about 190 requests a day) and stores that instead.
+
+Rows mirrored before the switch still hold the older list shape (`BillNumberFormatted`,
+`CurrentStatusEn`, `SponsorEn`, `LatestActivityDateTime`, …) in `source_json`.
+`normalizeBill` reads both.
 
 Chamber IDs: **1 = House of Commons, 2 = Senate**.
 

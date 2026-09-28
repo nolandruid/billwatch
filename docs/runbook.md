@@ -36,6 +36,23 @@ values; only `.env.example` is tracked.
   ```
   Response is JSON: `{ ok, results: [{ session, fetched, inserted, changed, notificationsQueued }] }`.
 
+## Daily health check
+
+`.github/workflows/health.yml` runs at 01:17 UTC (about two hours after the sync) and on
+demand from the Actions tab. It fails if:
+
+- the homepage isn't returning 200;
+- `/api/health` reports the last sync is over 12 hours old, the bills table is empty, or
+  notification emails failed or sat pending for over a day;
+- LEGISinfo's feed no longer normalizes into complete bills, or the per-bill record has
+  lost its sponsor or activity date. That would have caught the August 2026 schema change
+  on day one.
+
+A failure emails the repo owner and opens a `health-check` issue with the failing checks,
+and later failures comment on the same issue. The issue closes itself on the next passing
+run. Run the same checks locally with `npm run health`; set `HEALTH_SITE_URL` to point at a
+preview deployment.
+
 ## Adding a new parliamentary session
 
 When Parliament opens a new session, add its code (e.g. `"46-1"`) to `ACTIVE_SESSIONS` in
