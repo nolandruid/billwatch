@@ -55,8 +55,8 @@ export default async function Home() {
     }
     // Most recent activity first so the freshest bills are on top.
     bills.sort((a, b) => {
-      const at = a.source.LatestActivityDateTime ?? "";
-      const bt = b.source.LatestActivityDateTime ?? "";
+      const at = a.activityDate ?? "";
+      const bt = b.activityDate ?? "";
       return bt.localeCompare(at);
     });
     items = bills.map((bill) => toListItem(bill, photoForSponsor(photoMap, bill.sponsor)));
