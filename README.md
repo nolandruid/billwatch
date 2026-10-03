@@ -23,8 +23,10 @@ Royal Assent, and so on. No manual checking of the Parliament website required.
 1. A scheduled job pulls all bills for the active session from LEGISinfo's JSON export.
 2. It compares each bill's status against what we last stored. On a change, it logs the new
    status and queues a notification for every confirmed subscriber to that bill.
-3. A sender drains the queue and emails subscribers, linking to our bill page **and** the
+3. A sender drains the queue and emails those subscribers, linking to our bill page **and** the
    official LEGISinfo page.
+4. Separately, people can opt into a **sitting-end digest**: one email after the evening sync
+   listing every bill that moved that day. Existing per-bill subscribers are not enrolled.
 
 Full design: [`docs/architecture.md`](./docs/architecture.md).
 

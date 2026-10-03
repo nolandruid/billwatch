@@ -103,22 +103,153 @@ BillWatch is independent and not affiliated with the Government of Canada.`;
   return { subject, html, text };
 }
 
-/**
- * Tells the site owner a subscriber confirmed. Deliberately plain text and
- * unstyled: it is an internal signal, not a customer-facing email.
- */
-export function ownerSignupAlert(opts: { email: string; billNumber: string; billTitle: string }): {
+export function digestConfirmationEmail(opts: { confirmUrl: string }): {
   subject: string;
   html: string;
   text: string;
 } {
-  const { email, billNumber, billTitle } = opts;
-  const subject = `New BillWatch subscriber: ${billNumber}`;
-  const text = `${email} confirmed and is now tracking ${billNumber}.\n\n${billTitle}`;
-  const html = `<p>${escapeHtml(email)} confirmed and is now tracking <strong>${escapeHtml(
-    billNumber,
-  )}</strong>.</p><p>${escapeHtml(billTitle)}</p>`;
+  const { confirmUrl } = opts;
+  const subject = "Confirm your BillWatch sitting-end digest";
+  const html = layout(
+    `<p style="margin:0 0 12px;">Please confirm you want one email at the end of each sitting day,
+      listing every federal bill that changed status.</p>
+     <p style="margin:0 0 20px;">We only send mail after you confirm. This is separate from
+      per-bill alerts.</p>
+     <a href="${confirmUrl}" style="display:inline-block;background:${ACCENT};color:#fff;
+       text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px;">
+       Confirm the digest</a>
+     <p style="margin:20px 0 0;font-size:13px;color:#6b7280;">Or paste this link:<br>
+       <a href="${confirmUrl}" style="color:${BRAND};">${confirmUrl}</a></p>`,
+    `You received this because someone entered this address on billwatch.ca for the sitting-end
+     digest. If that wasn't you, ignore this email and nothing happens. BillWatch is an
+     independent, open-source project, not affiliated with the Government of Canada.`,
+  );
+  const text = `Confirm your BillWatch sitting-end digest.
+We only send mail after you confirm:
+${confirmUrl}
+
+If that wasn't you, ignore this email. BillWatch is independent and not affiliated with the Government of Canada.`;
   return { subject, html, text };
+}
+
+export function digestSubscribedEmail(opts: { unsubscribeUrl: string }): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const { unsubscribeUrl } = opts;
+  const subject = "You're on the BillWatch sitting-end digest";
+  const html = layout(
+    `<p style="margin:0 0 16px;">You're on the sitting-end digest. After the House and Senate wrap,
+      we'll send one email listing every federal bill that changed status that day, with links to
+      BillWatch and LEGISinfo.</p>
+     <p style="margin:0;font-size:13px;color:#6b7280;">This does not change any per-bill alerts
+      you already have.</p>`,
+    `You subscribed on billwatch.ca.
+     <a href="${unsubscribeUrl}" style="color:#6b7280;">Unsubscribe from the digest</a>.
+     BillWatch is an independent, open-source project, not affiliated with the Government of Canada.`,
+  );
+  const text = `You're on the BillWatch sitting-end digest. After the House and Senate wrap, we'll send one email listing every federal bill that changed status that day.
+
+Unsubscribe: ${unsubscribeUrl}
+BillWatch is independent and not affiliated with the Government of Canada.`;
+  return { subject, html, text };
+}
+
+export function digestEmail(opts: {
+  sittingDate: string;
+  unsubscribeUrl: string;
+  bills: Array<{
+    billNumber: string;
+    title: string;
+    status: string;
+    billUrl: string;
+    legisinfoUrl: string;
+  }>;
+}): { subject: string; html: string; text: string } {
+  const { sittingDate, unsubscribeUrl, bills } = opts;
+  const n = bills.length;
+  const subject =
+    n === 1 ? `${bills[0].billNumber} changed status today` : `${n} bills changed status today`;
+  const dateLabel = formatSittingDate(sittingDate);
+  const itemsHtml = bills
+    .map(
+      (bill) =>
+        `<li style="margin:0 0 16px;">
+          <div style="font-weight:700;">${escapeHtml(bill.billNumber)}</div>
+          <div style="color:#4b5563;">${escapeHtml(bill.title)}</div>
+          <div style="margin:4px 0 8px;font-weight:600;">${escapeHtml(bill.status)}</div>
+          <a href="${bill.billUrl}" style="color:${BRAND};">BillWatch</a>
+          &nbsp;&middot;&nbsp;
+          <a href="${bill.legisinfoUrl}" style="color:${BRAND};">LEGISinfo</a>
+        </li>`,
+    )
+    .join("");
+  const html = layout(
+    `<p style="margin:0 0 16px;">Here's what moved in Parliament on ${escapeHtml(dateLabel)}.</p>
+     <ul style="margin:0;padding-left:18px;">${itemsHtml}</ul>`,
+    `You're getting this because you subscribed to the sitting-end digest on billwatch.ca.
+     <a href="${unsubscribeUrl}" style="color:#6b7280;">Unsubscribe from the digest</a>.
+     Per-bill alerts are unchanged. BillWatch is an independent, open-source project, not
+     affiliated with the Government of Canada.`,
+  );
+  const itemsText = bills
+    .map(
+      (bill) =>
+        `${bill.billNumber}: ${bill.title}\n${bill.status}\nBillWatch: ${bill.billUrl}\nLEGISinfo: ${bill.legisinfoUrl}`,
+    )
+    .join("\n\n");
+  const text = `Here's what moved in Parliament on ${dateLabel}.
+
+${itemsText}
+
+Unsubscribe: ${unsubscribeUrl}
+Per-bill alerts are unchanged. BillWatch is independent and not affiliated with the Government of Canada.`;
+  return { subject, html, text };
+}
+
+/**
+ * Tells the site owner a subscriber confirmed. Deliberately plain text and
+ * unstyled: it is an internal signal, not a customer-facing email.
+ */
+export function ownerSignupAlert(opts: {
+  email: string;
+  billNumber?: string;
+  billTitle?: string;
+  digest?: boolean;
+}): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const { email, billNumber, billTitle, digest } = opts;
+  if (digest && !billNumber) {
+    const subject = "New BillWatch digest subscriber";
+    const text = `${email} confirmed and joined the sitting-end digest.`;
+    const html = `<p>${escapeHtml(email)} confirmed and joined the sitting-end digest.</p>`;
+    return { subject, html, text };
+  }
+  const number = billNumber ?? "a bill";
+  const subject = `New BillWatch subscriber: ${number}`;
+  const text = `${email} confirmed and is now tracking ${number}.\n\n${billTitle ?? ""}`;
+  const html = `<p>${escapeHtml(email)} confirmed and is now tracking <strong>${escapeHtml(
+    number,
+  )}</strong>.</p><p>${escapeHtml(billTitle ?? "")}</p>`;
+  return { subject, html, text };
+}
+
+function formatSittingDate(ymd: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+  if (!match) return ymd;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-CA", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 function escapeHtml(s: string): string {

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function SiteFooter() {
   return (
     <footer className="border-t border-slate-200 bg-white">
@@ -25,6 +27,10 @@ export function SiteFooter() {
           >
             Source on GitHub
           </a>
+          {" · "}
+          <Link href="/#digest" className="underline underline-offset-2 hover:text-red-600">
+            Sitting-end digest
+          </Link>
         </p>
       </div>
     </footer>
