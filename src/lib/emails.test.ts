@@ -8,7 +8,7 @@ describe("notificationEmail", () => {
     status: "At consideration in committee",
     billUrl: "https://billwatch.ca/bills/c-15",
     manageUrl: "https://billwatch.ca/manage?token=t",
-    unsubscribeUrl: "https://billwatch.ca/api/unsubscribe?token=t",
+    unsubscribeUrl: "https://billwatch.ca/api/unsubscribe?token=t&bill=b",
   });
 
   it("always points to the per-bill preference", () => {
@@ -20,8 +20,11 @@ describe("notificationEmail", () => {
     );
   });
 
-  it("keeps both Manage and Unsubscribe in the footer", () => {
+  it("unsubscribes from this bill, with Manage for everything else", () => {
+    expect(email.text).toContain(
+      "Unsubscribe from C-15: https://billwatch.ca/api/unsubscribe?token=t&bill=b",
+    );
     expect(email.text).toContain("Manage subscriptions: https://billwatch.ca/manage?token=t");
-    expect(email.text).toContain("Unsubscribe: https://billwatch.ca/api/unsubscribe?token=t");
+    expect(email.html).toContain(">Unsubscribe from C-15</a>");
   });
 });

@@ -18,6 +18,14 @@ export function manageUrl(unsubscribeToken: string): string {
   return `${siteUrl()}/manage?token=${unsubscribeToken}`;
 }
 
+/**
+ * The "Unsubscribe" link (and one-click List-Unsubscribe header) in a bill's emails: it stops
+ * that one bill. Unsubscribing from everything lives on the manage page.
+ */
+export function billUnsubscribeUrl(unsubscribeToken: string, billId: string): string {
+  return `${siteUrl()}/api/unsubscribe?token=${unsubscribeToken}&bill=${billId}`;
+}
+
 /** "bud.druid@gmail.com" → "b•••d@gmail.com", so a forwarded link doesn't show the address. */
 export function maskEmail(email: string): string {
   const at = email.lastIndexOf("@");
@@ -125,4 +133,29 @@ export async function applyManageAction(
     .select("id")
     .maybeSingle();
   return { ok: !error && !!data };
+}
+
+/** Stop one bill's emails for the token's subscriber. Returns the bill number for the page. */
+export async function unsubscribeFromBill(
+  supabase: SupabaseClient,
+  token: string,
+  billId: string,
+): Promise<{ ok: boolean; billNumber?: string }> {
+  if (!isToken(billId)) return { ok: false };
+  const sub = await subscriberIdFor(supabase, token);
+  if (!sub) return { ok: false };
+  const { data: bill } = await supabase
+    .from("bills")
+    .select("bill_number")
+    .eq("id", billId)
+    .maybeSingle();
+  const { error } = await supabase
+    .from("subscriptions")
+    .delete()
+    .eq("subscriber_id", sub.id)
+    .eq("bill_id", billId);
+  if (error) return { ok: false };
+  // Already removed (a second click, or the mail client's one-click POST then a click) still
+  // counts as success: the person is not subscribed to that bill either way.
+  return { ok: true, billNumber: (bill as { bill_number: string } | null)?.bill_number };
 }

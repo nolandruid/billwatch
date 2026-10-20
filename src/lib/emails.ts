@@ -67,8 +67,8 @@ export function notificationEmail(opts: {
        ${billNumber}, like passing a chamber or Royal Assent?
        <a href="${manageUrl}" style="color:${BRAND};">Choose which changes email you</a>.</p>`,
     `You're getting this because you subscribed to ${billNumber} on billwatch.ca.
-     <a href="${manageUrl}" style="color:#6b7280;">Manage subscriptions</a> &middot;
-     <a href="${unsubscribeUrl}" style="color:#6b7280;">Unsubscribe</a>.
+     <a href="${unsubscribeUrl}" style="color:#6b7280;">Unsubscribe from ${billNumber}</a> &middot;
+     <a href="${manageUrl}" style="color:#6b7280;">Manage subscriptions</a>.
      BillWatch is an independent, open-source project, not affiliated with the Government of Canada.`,
   );
   const text = `${billNumber} (${billTitle}) changed status:
@@ -78,8 +78,8 @@ View on BillWatch: ${billUrl}
 
 Only want the big moments for ${billNumber}, like passing a chamber or Royal Assent? Choose which changes email you: ${manageUrl}
 
+Unsubscribe from ${billNumber}: ${unsubscribeUrl}
 Manage subscriptions: ${manageUrl}
-Unsubscribe: ${unsubscribeUrl}
 BillWatch is independent and not affiliated with the Government of Canada.`;
   return { subject, html, text };
 }
@@ -100,16 +100,16 @@ export function subscribedEmail(opts: {
        text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px;">
        View ${billNumber} on BillWatch</a>`,
     `You subscribed on billwatch.ca.
-     <a href="${manageUrl}" style="color:#6b7280;">Manage subscriptions</a> &middot;
-     <a href="${unsubscribeUrl}" style="color:#6b7280;">Unsubscribe</a>.
+     <a href="${unsubscribeUrl}" style="color:#6b7280;">Unsubscribe from ${billNumber}</a> &middot;
+     <a href="${manageUrl}" style="color:#6b7280;">Manage subscriptions</a>.
      BillWatch is an independent, open-source project, not affiliated with the Government of Canada.`,
   );
   const text = `You're now tracking ${billNumber} (${billTitle}). We'll email you each time it changes status.
 
 View on BillWatch: ${billUrl}
 
+Unsubscribe from ${billNumber}: ${unsubscribeUrl}
 Manage subscriptions: ${manageUrl}
-Unsubscribe: ${unsubscribeUrl}
 BillWatch is independent and not affiliated with the Government of Canada.`;
   return { subject, html, text };
 }

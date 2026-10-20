@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail, siteUrl } from "@/lib/resend";
 import { confirmationEmail, ownerSignupAlert, subscribedEmail } from "@/lib/emails";
 import { DEFAULT_NOTIFY_ON, type NotifyOn } from "@/lib/notify-prefs";
-import { manageUrl } from "@/lib/manage";
+import { billUnsubscribeUrl, manageUrl } from "@/lib/manage";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -83,10 +83,10 @@ export async function subscribeToBill(
         billTitle: bill.title,
         billUrl: `${siteUrl()}/bills/${bill.bill_number.toLowerCase()}`,
         manageUrl: manageUrl(sub.unsubscribe_token),
-        unsubscribeUrl: `${siteUrl()}/api/unsubscribe?token=${sub.unsubscribe_token}`,
+        unsubscribeUrl: billUnsubscribeUrl(sub.unsubscribe_token, bill.id),
       }),
       headers: {
-        "List-Unsubscribe": `<${siteUrl()}/api/unsubscribe?token=${sub.unsubscribe_token}>`,
+        "List-Unsubscribe": `<${billUnsubscribeUrl(sub.unsubscribe_token, bill.id)}>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
     });
