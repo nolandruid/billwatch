@@ -62,7 +62,10 @@ export function notificationEmail(opts: {
      <p style="margin:0 0 16px;font-size:18px;font-weight:600;">${escapeHtml(status)}</p>
      <a href="${billUrl}" style="display:inline-block;background:${BRAND};color:#fff;
        text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px;">
-       View ${billNumber} on BillWatch</a>`,
+       View ${billNumber} on BillWatch</a>
+     <p style="margin:20px 0 0;font-size:14px;color:#4b5563;">Only want the big moments for
+       ${billNumber}, like passing a chamber or Royal Assent?
+       <a href="${manageUrl}" style="color:${BRAND};">Choose which changes email you</a>.</p>`,
     `You're getting this because you subscribed to ${billNumber} on billwatch.ca.
      <a href="${manageUrl}" style="color:#6b7280;">Manage subscriptions</a> &middot;
      <a href="${unsubscribeUrl}" style="color:#6b7280;">Unsubscribe</a>.
@@ -72,6 +75,8 @@ export function notificationEmail(opts: {
 ${status}
 
 View on BillWatch: ${billUrl}
+
+Only want the big moments for ${billNumber}, like passing a chamber or Royal Assent? Choose which changes email you: ${manageUrl}
 
 Manage subscriptions: ${manageUrl}
 Unsubscribe: ${unsubscribeUrl}
