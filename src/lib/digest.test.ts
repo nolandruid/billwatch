@@ -5,6 +5,7 @@ import {
   selectDigestBills,
   sittingDateInOttawa,
   sendSittingDigest,
+  isDigestTime,
   type DigestHistoryRow,
 } from "@/lib/digest";
 
@@ -39,6 +40,15 @@ describe("sittingDateInOttawa", () => {
 
   it("rolls to the next Ottawa day after midnight Eastern", () => {
     expect(sittingDateInOttawa(new Date("2026-09-04T04:30:00.000Z"))).toBe("2026-09-04");
+  });
+});
+
+describe("isDigestTime", () => {
+  it("is false for the midday run and true for the evening run, in both EST and EDT", () => {
+    expect(isDigestTime(new Date("2026-09-03T17:00:00Z"))).toBe(false); // 1pm EDT
+    expect(isDigestTime(new Date("2026-09-03T23:00:00Z"))).toBe(true); // 7pm EDT
+    expect(isDigestTime(new Date("2026-12-03T17:59:00Z"))).toBe(false); // 12:59pm EST
+    expect(isDigestTime(new Date("2026-12-03T23:00:00Z"))).toBe(true); // 6pm EST
   });
 });
 
@@ -229,6 +239,42 @@ describe("sendSittingDigest", () => {
     expect(payload?.html).toContain("legisinfo");
     expect(db.digest_outbox).toHaveLength(1);
     expect(db.digest_outbox[0]?.state).toBe("sent");
+  });
+
+  it("waits for the evening run: the midday sync sends nothing", async () => {
+    const { from, db } = createFakeSupabase({
+      subscribers: [digestSub],
+      bills: [
+        {
+          id: billId,
+          bill_number: "C-2",
+          title: "An Act to amend the Criminal Code",
+          legisinfo_url: "https://www.parl.ca/legisinfo/en/bill/45-1/c-2",
+        },
+      ],
+      bill_status_history: [
+        {
+          id: "hist-1",
+          bill_id: billId,
+          status: "In committee",
+          stage: "committee_house",
+          detected_at: "2026-09-03T17:00:00.000Z",
+        },
+      ],
+    });
+
+    // 17:05 UTC = 1:05pm EDT: the midday run.
+    const midday = await sendSittingDigest({ from } as never, new Date("2026-09-03T17:05:00.000Z"));
+    expect(midday).toMatchObject({ bills: 1, queued: 0, sent: 0 });
+    expect(sendEmailMock).not.toHaveBeenCalled();
+
+    // 23:05 UTC = 7:05pm EDT: the evening run sends it.
+    const evening = await sendSittingDigest(
+      { from } as never,
+      new Date("2026-09-03T23:05:00.000Z"),
+    );
+    expect(evening).toMatchObject({ bills: 1, queued: 1, sent: 1 });
+    expect(db.digest_outbox).toHaveLength(1);
   });
 
   it("does not enqueue or email when no bills changed that sitting day", async () => {

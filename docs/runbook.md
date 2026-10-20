@@ -31,7 +31,9 @@ values; only `.env.example` is tracked.
 - **What it does:** pulls each session in `ACTIVE_SESSIONS` ([`src/lib/sync.ts`](../src/lib/sync.ts)),
   upserts bills, logs status changes, queues per-bill notifications, drains that
   outbox, then sends the sitting-end digest to confirmed `digest_opt_in`
-  subscribers if any bills moved that Ottawa calendar day.
+  subscribers if any bills moved that Ottawa calendar day. Only a run at or after
+  5pm Ottawa time (the evening run) queues the digest, so a midday run never sends a
+  half-day digest.
 - **Run manually:**
   ```bash
   curl -X POST "$NEXT_PUBLIC_SITE_URL/api/cron/sync" -H "Authorization: Bearer $CRON_SECRET"
@@ -41,8 +43,8 @@ values; only `.env.example` is tracked.
 ## Database migrations
 
 Apply `supabase/migrations/` in order against the Supabase project (Studio SQL
-editor or the CLI). `0002_sitting_digest.sql` adds `subscribers.digest_opt_in`
-(default false) and `digest_outbox`. Deploy the app only after 0002 has been
+editor or the CLI). `0004_sitting_digest.sql` adds `subscribers.digest_opt_in`
+(default false) and `digest_outbox`. Deploy the app only after 0004 has been
 applied, or digest enqueue will fail.
 
 ## Daily health check

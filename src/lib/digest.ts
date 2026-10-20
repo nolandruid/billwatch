@@ -51,6 +51,25 @@ export interface DigestSendResult {
   failed: number;
 }
 
+/**
+ * The sync also runs at midday (weekdays 17:00 UTC), but the digest covers the whole sitting
+ * day and goes out once per subscriber per day, so only the evening run (23:00 UTC = 6pm EST /
+ * 7pm EDT) may send it. 5pm Ottawa splits the two runs with an hour or more to spare on either
+ * side, including across DST and Vercel Hobby's within-the-hour jitter.
+ */
+export const DIGEST_EARLIEST_HOUR_OTTAWA = 17;
+
+export function isDigestTime(now: Date = new Date()): boolean {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: OTTAWA_TZ,
+      hour: "numeric",
+      hourCycle: "h23",
+    }).format(now),
+  );
+  return hour >= DIGEST_EARLIEST_HOUR_OTTAWA;
+}
+
 /** Ottawa calendar date (YYYY-MM-DD). Parliament sits on Eastern Time. */
 export function sittingDateInOttawa(now: Date = new Date()): string {
   return now.toLocaleDateString("en-CA", { timeZone: OTTAWA_TZ });
@@ -244,8 +263,9 @@ export async function drainDigestOutbox(
 
 /**
  * After the evening sync: if any bills changed on today's Ottawa sitting date, enqueue a
- * digest for opt-in subscribers, then drain. Always drains leftover pending rows so a
- * failed send can retry. Does not enroll anyone; only confirmed digest_opt_in rows.
+ * digest for opt-in subscribers, then drain. Earlier runs (see isDigestTime) enqueue nothing.
+ * Always drains leftover pending rows so a failed send can retry. Does not enroll anyone;
+ * only confirmed digest_opt_in rows.
  */
 export async function sendSittingDigest(
   supabase: SupabaseClient,
@@ -253,7 +273,8 @@ export async function sendSittingDigest(
 ): Promise<DigestSendResult> {
   const sittingDate = sittingDateInOttawa(now);
   const bills = await loadDigestBills(supabase, sittingDate);
-  const queued = bills.length > 0 ? await enqueueDigest(supabase, sittingDate) : 0;
+  const queued =
+    isDigestTime(now) && bills.length > 0 ? await enqueueDigest(supabase, sittingDate) : 0;
   const { sent, failed } = await drainDigestOutbox(supabase);
   return { sittingDate, bills: bills.length, queued, sent, failed };
 }

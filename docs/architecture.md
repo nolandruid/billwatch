@@ -43,8 +43,9 @@ changes), and the **notifier** (sends emails).
    detected on today's America/Toronto date, enqueue one `digest_outbox` row per
    confirmed subscriber with `digest_opt_in = true`, then drain. Existing per-bill
    subscribers are **not** enrolled (`digest_opt_in` defaults to false). Empty
-   days send nothing. Unique `(subscriber_id, sitting_date)` makes re-runs
-   idempotent. Digest unsubscribe (`?list=digest`) only clears the flag.
+   days send nothing. Only runs at or after 5pm Ottawa queue it, so an earlier sync
+   (e.g. a midday run) doesn't send a half-day digest. Unique
+   `(subscriber_id, sitting_date)` makes re-runs idempotent. Digest unsubscribe (`?list=digest`) only clears the flag.
 
 ## Why the change signal is stored, not recomputed
 
