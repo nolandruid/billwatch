@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Bell, Check } from "lucide-react";
+import { NotifyOnSelect, notifyOnSummary } from "@/components/notify-on-select";
+import { DEFAULT_NOTIFY_ON, type NotifyOn } from "@/lib/notify-prefs";
 
 type Status = "idle" | "sending" | "confirmation_sent" | "subscribed" | "error";
 
@@ -19,6 +21,7 @@ export function NotifyDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
+  const [notifyOn, setNotifyOn] = useState<NotifyOn>(DEFAULT_NOTIFY_ON);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState("");
 
@@ -31,7 +34,7 @@ export function NotifyDialog({
       const res = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, billNumber }),
+        body: JSON.stringify({ email, billNumber, notifyOn }),
       });
       const data = (await res.json()) as { ok: boolean; status?: Status; message?: string };
       if (data.ok && (data.status === "confirmation_sent" || data.status === "subscribed")) {
@@ -51,6 +54,7 @@ export function NotifyDialog({
     setTimeout(() => {
       setStatus("idle");
       setEmail("");
+      setNotifyOn(DEFAULT_NOTIFY_ON);
       setError("");
     }, 200);
   }
@@ -109,7 +113,7 @@ export function NotifyDialog({
                     ) : (
                       <>
                         You&apos;re now tracking <span className="font-semibold">{billNumber}</span>
-                        . We&apos;ll email you each time it changes status.
+                        . We&apos;ll email you {notifyOnSummary(notifyOn)}.
                       </>
                     )}
                   </p>
@@ -129,6 +133,11 @@ export function NotifyDialog({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="example@example.com"
+                      className="border-mauve-deep/20 bg-background focus:border-cerise focus:ring-cerise/20 w-full rounded-lg border px-3 py-2.5 text-sm outline-none focus:ring-2"
+                    />
+                    <NotifyOnSelect
+                      value={notifyOn}
+                      onChange={setNotifyOn}
                       className="border-mauve-deep/20 bg-background focus:border-cerise focus:ring-cerise/20 w-full rounded-lg border px-3 py-2.5 text-sm outline-none focus:ring-2"
                     />
                     {status === "error" && <p className="text-intro text-xs">{error}</p>}

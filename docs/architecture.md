@@ -35,8 +35,10 @@ changes), and the **notifier** (sends emails).
    each fetched bill, and compares `current_status` / `current_stage`:
    - **New bill** → recorded in `bill_status_history`, **no** notifications.
    - **Changed bill** → new `bill_status_history` row + one `notifications_outbox` row per
-     confirmed subscriber. The `(subscriber_id, status_history_id)` unique constraint makes
-     re-runs idempotent.
+     confirmed subscriber whose `subscriptions.notify_on` preference matches the change
+     (`all`, `milestones` = passed a chamber or Royal Assent, `law`, `died`; see
+     `src/lib/notify-prefs.ts`). The `(subscriber_id, status_history_id)` unique constraint
+     makes re-runs idempotent.
 4. The **notifier** (added in v1) drains `notifications_outbox` via Resend and marks rows
    `sent` / `failed`.
 

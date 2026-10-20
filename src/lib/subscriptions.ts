@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail, siteUrl } from "@/lib/resend";
 import { confirmationEmail, ownerSignupAlert, subscribedEmail } from "@/lib/emails";
+import { DEFAULT_NOTIFY_ON, type NotifyOn } from "@/lib/notify-prefs";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -15,12 +16,14 @@ export interface SubscribeResult {
 /**
  * Subscribe an email to a bill. CASL double opt-in: a brand-new address gets a confirmation
  * email and receives nothing else until it confirms. An already-confirmed address starts
- * tracking immediately. Idempotent on (subscriber, bill).
+ * tracking immediately. Idempotent on (subscriber, bill); subscribing again updates the
+ * notification preference.
  */
 export async function subscribeToBill(
   supabase: SupabaseClient,
   rawEmail: string,
   billNumber: string,
+  notifyOn: NotifyOn = DEFAULT_NOTIFY_ON,
 ): Promise<SubscribeResult> {
   const email = rawEmail.trim().toLowerCase();
   if (!EMAIL_RE.test(email) || email.length > 254) {
@@ -60,12 +63,13 @@ export async function subscribeToBill(
     sub = ins.data;
   }
 
-  // Record the subscription (unique on subscriber+bill makes this idempotent).
+  // Record the subscription (unique on subscriber+bill makes this idempotent). A repeat
+  // subscribe overwrites notify_on, so it doubles as "change my preference".
   await supabase
     .from("subscriptions")
     .upsert(
-      { subscriber_id: sub.id, bill_id: bill.id },
-      { onConflict: "subscriber_id,bill_id", ignoreDuplicates: true },
+      { subscriber_id: sub.id, bill_id: bill.id, notify_on: notifyOn },
+      { onConflict: "subscriber_id,bill_id" },
     );
 
   // Already-confirmed subscriber: it's active immediately, but still send an acknowledgement
