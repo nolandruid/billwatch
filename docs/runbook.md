@@ -21,12 +21,18 @@ values; only `.env.example` is tracked.
 
 ## The sync job
 
-- **Schedule:** daily at 23:00 UTC via Vercel Cron (`vercel.json`). That is 6:00pm
-  America/Toronto during EST (UTC−5, roughly November–March) and 7:00pm during EDT
-  (UTC−4, roughly March–November). Vercel Cron is UTC-only, so the Ottawa clock
-  hour shifts by one hour at the DST transitions. Chosen as an evening slot after
-  5pm Ottawa so status-change emails land when people check inboxes later in the
-  day, and so a future sitting-end digest can run after typical House/Senate hours.
+- **Schedule:** two Vercel Cron runs (`vercel.json`). Vercel Cron is UTC-only, so the
+  Ottawa clock hour shifts by one hour at the DST transitions (EST is UTC−5, roughly
+  November–March; EDT is UTC−4, roughly March–November).
+  - **Weekdays at 17:00 UTC** (12:00pm EST / 1:00pm EDT). Picks up the previous evening's
+    votes and the morning's business, which LEGISinfo often posts the next morning.
+    Weekdays only because Parliament doesn't sit on weekends.
+  - **Daily at 23:00 UTC** (6:00pm EST / 7:00pm EDT). An evening slot after 5pm Ottawa so
+    status-change emails land when people check inboxes later in the day, and so a future
+    sitting-end digest can run after typical House/Senate hours.
+
+  Running more than once is safe: the outbox's `(subscriber_id, status_history_id)`
+  unique constraint means a change is never emailed twice.
 - **Endpoint:** `POST`/`GET` `/api/cron/sync`, requires `Authorization: Bearer $CRON_SECRET`.
 - **What it does:** pulls each session in `ACTIVE_SESSIONS` ([`src/lib/sync.ts`](../src/lib/sync.ts)),
   upserts bills, logs status changes, queues notifications.

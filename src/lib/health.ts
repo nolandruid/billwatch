@@ -16,7 +16,7 @@ export interface HealthSnapshot {
 }
 
 /**
- * The sync runs daily at 23:00 UTC and the check runs about two hours later, so anything
+ * The evening sync runs daily at 23:00 UTC and the check runs about two hours later, so anything
  * older than this means the most recent run did not write.
  */
 export const MAX_SYNC_AGE_HOURS = 12;
