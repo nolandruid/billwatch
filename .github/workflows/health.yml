@@ -1,0 +1,83 @@
+name: Health check
+
+# Daily check that production is in order: the site is up, the nightly LEGISinfo sync
+# (23:00 UTC) actually wrote, notification emails aren't failing, and LEGISinfo's feed still
+# parses with our code. A failed run emails the repo owner (GitHub's default for scheduled
+# workflows) and opens an issue with the details; the issue closes itself once a run passes.
+#
+# GitHub disables scheduled workflows after 60 days without repo activity and emails a
+# warning first; re-enable it from the Actions tab if that happens.
+
+on:
+  schedule:
+    - cron: "17 1 * * *" # 01:17 UTC, about two hours after the sync
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: health-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Production health
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run live checks
+        id: checks
+        run: npm run health -- --reporter=default --reporter=json --outputFile=health-report.json
+
+      - name: Summarize failures
+        if: failure() && steps.checks.outcome == 'failure'
+        run: |
+          node -e '
+            const fs = require("fs");
+            let lines = [];
+            try {
+              const r = JSON.parse(fs.readFileSync("health-report.json", "utf8"));
+              for (const file of r.testResults) for (const t of file.assertionResults) {
+                if (t.status !== "failed") continue;
+                const why = (t.failureMessages[0] || "").split("\n").filter(Boolean).slice(0, 6).join("\n");
+                lines.push(`### ${t.fullName}\n\n\`\`\`\n${why}\n\`\`\``);
+              }
+            } catch (e) { lines.push("Could not read the test report: " + e.message); }
+            fs.writeFileSync("health-failures.md", lines.join("\n\n") || "The check run failed before any test reported.");
+          '
+          cat health-failures.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update the alert issue
+        if: failure() && steps.checks.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body="$(printf 'The daily health check failed on %s.\n\n%s\n\nRun: %s' "$(date -u +'%Y-%m-%d %H:%M UTC')" "$(cat health-failures.md)" "$RUN_URL")"
+          gh label create health-check --color B60205 --description "Daily production health check" 2>/dev/null || true
+          existing="$(gh issue list --label health-check --state open --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "Health check failing" --label health-check --assignee "${{ github.repository_owner }}" --body "$body"
+          fi
+
+      - name: Close the alert issue once healthy
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for n in $(gh issue list --label health-check --state open --json number --jq '.[].number'); do
+            gh issue close "$n" --comment "Health check passing again: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          done

@@ -57,6 +57,126 @@ export interface LegisinfoBillSummary {
   SponsorConstituencyName?: string | null;
 }
 
+/**
+ * The list endpoint's current shape. In August 2026 LEGISinfo switched `bills/json` to the
+ * per-bill record schema (NumberCode, StatusNameEn, …). The list version leaves sponsor
+ * fields blank and LatestBillEventDateTime at a 0001-01-01 placeholder, so those have to
+ * come from the per-bill endpoint (`fetchBillsWithDetails`), which uses the same shape.
+ * Rows mirrored before the switch still hold the older `LegisinfoBillSummary` shape.
+ */
+export interface LegisinfoBillRecord {
+  Id: number;
+  NumberCode: string; // "C-15", "S-216"
+  ParliamentNumber: number;
+  SessionNumber: number;
+  LongTitleEn: string;
+  ShortTitleEn: string;
+  BillDocumentTypeNameEn: string | null;
+  OriginatingChamberOrganizationId: number;
+  StatusId: number | null;
+  StatusNameEn: string | null;
+  LatestCompletedMajorStageNameEn: string | null;
+  LatestCompletedMajorStageChamberOrganizationId: number | null;
+  LatestBillEventTypeNameEn: string | null;
+  LatestBillEventDateTime: string | null;
+  LatestCompletedBillStageDateTime: string | null;
+  PassedHouseFirstReadingDateTime: string | null;
+  PassedHouseSecondReadingDateTime: string | null;
+  PassedHouseThirdReadingDateTime: string | null;
+  PassedSenateFirstReadingDateTime: string | null;
+  PassedSenateSecondReadingDateTime: string | null;
+  PassedSenateThirdReadingDateTime: string | null;
+  ReceivedRoyalAssentDateTime: string | null;
+  SponsorPersonId?: number | null;
+  SponsorPersonName?: string | null;
+  SponsorPersonShortHonorificEn?: string | null;
+  SponsorAffiliationTitleEn?: string | null;
+  SponsorAffiliationRoleNameEn?: string | null;
+  SponsorConstituencyNameEn?: string | null;
+}
+
+/** Either LEGISinfo shape, as fetched or as stored in `bills.source_json`. */
+export type LegisinfoRawBill = LegisinfoBillSummary | LegisinfoBillRecord;
+
+export function isBillRecord(raw: LegisinfoRawBill): raw is LegisinfoBillRecord {
+  return "NumberCode" in raw;
+}
+
+/** LEGISinfo's "no value" timestamp. */
+function realDate(s: string | null | undefined): string | null {
+  return s && !s.startsWith("0001-") ? s : null;
+}
+
+/**
+ * Latest activity for a new-shape record. List records leave LatestBillEventDateTime at the
+ * placeholder, so fall back to the newest milestone they do carry (misses committee events).
+ */
+function activityDateFrom(raw: LegisinfoBillRecord): string | null {
+  const direct = realDate(raw.LatestBillEventDateTime);
+  if (direct) return direct;
+  const dates = [
+    raw.LatestCompletedBillStageDateTime,
+    raw.PassedHouseFirstReadingDateTime,
+    raw.PassedHouseSecondReadingDateTime,
+    raw.PassedHouseThirdReadingDateTime,
+    raw.PassedSenateFirstReadingDateTime,
+    raw.PassedSenateSecondReadingDateTime,
+    raw.PassedSenateThirdReadingDateTime,
+    raw.ReceivedRoyalAssentDateTime,
+  ]
+    .map(realDate)
+    .filter((d): d is string => d !== null);
+  if (dates.length === 0) return null;
+  return dates.reduce((a, b) => (Date.parse(b) > Date.parse(a) ? b : a));
+}
+
+/** Map a new-shape record onto the summary shape the rest of this module is written against. */
+function toSummary(raw: LegisinfoRawBill): LegisinfoBillSummary {
+  if (!isBillRecord(raw)) return raw;
+  return {
+    BillId: raw.Id,
+    BillNumberFormatted: raw.NumberCode,
+    ParliamentNumber: raw.ParliamentNumber,
+    SessionNumber: raw.SessionNumber,
+    ParlSessionCode: `${raw.ParliamentNumber}-${raw.SessionNumber}`,
+    LongTitleEn: raw.LongTitleEn,
+    ShortTitleEn: raw.ShortTitleEn,
+    BillTypeEn: raw.BillDocumentTypeNameEn ?? "",
+    SponsorEn: sponsorDisplayName(raw),
+    OriginatingChamberId: raw.OriginatingChamberOrganizationId,
+    CurrentStatusId: raw.StatusId,
+    CurrentStatusEn: raw.StatusNameEn,
+    LatestCompletedMajorStageEn: raw.LatestCompletedMajorStageNameEn,
+    LatestCompletedMajorStageChamberId: raw.LatestCompletedMajorStageChamberOrganizationId,
+    LatestActivityEn: raw.LatestBillEventTypeNameEn,
+    LatestActivityDateTime: activityDateFrom(raw),
+    PassedHouseFirstReadingDateTime: raw.PassedHouseFirstReadingDateTime,
+    PassedHouseThirdReadingDateTime: raw.PassedHouseThirdReadingDateTime,
+    PassedSenateFirstReadingDateTime: raw.PassedSenateFirstReadingDateTime,
+    PassedSenateThirdReadingDateTime: raw.PassedSenateThirdReadingDateTime,
+    ReceivedRoyalAssentDateTime: raw.ReceivedRoyalAssentDateTime,
+    SponsorPersonId: raw.SponsorPersonId,
+    SponsorPersonName: raw.SponsorPersonName,
+    SponsorPersonShortHonorific: raw.SponsorPersonShortHonorificEn,
+    SponsorAffiliationTitle: raw.SponsorAffiliationTitleEn,
+    SponsorAffiliationRoleName: raw.SponsorAffiliationRoleNameEn,
+    SponsorConstituencyName: raw.SponsorConstituencyNameEn,
+  };
+}
+
+/**
+ * Sponsor in the old SponsorEn style ("Hon. Rebecca Alty", "Sen. Lucie Moncion", "Mel Arnold").
+ * Null when the record carries no name, which is always the case on the list endpoint.
+ */
+export function sponsorDisplayName(raw: LegisinfoBillRecord): string | null {
+  const name = raw.SponsorPersonName?.trim();
+  if (!name) return null;
+  // The old feed styled every Senate bill sponsor "Sen.", even ones LEGISinfo calls "Hon.".
+  if (raw.NumberCode.startsWith("S-")) return `Sen. ${name}`;
+  const honorific = raw.SponsorPersonShortHonorificEn?.trim();
+  return honorific ? `${honorific} ${name}` : name;
+}
+
 /** One step in the bill's journey, for the GovTrack-style progress tracker. */
 export interface ProgressStep {
   key: string;
@@ -96,7 +216,9 @@ export interface NormalizedBill {
    * is unchanged between sub-steps.
    */
   statusKey: string;
-  source: LegisinfoBillSummary;
+  /** Latest activity timestamp, used for "most recent first" sorting. */
+  activityDate: string | null;
+  source: LegisinfoRawBill;
 }
 
 /**
@@ -137,7 +259,7 @@ export function toListItem(bill: NormalizedBill, photoUrl: string | null): BillL
     legisinfoUrl: bill.legisinfoUrl,
     progress: bill.progress,
     photoUrl,
-    activityDate: bill.source.LatestActivityDateTime ?? null,
+    activityDate: bill.activityDate,
     stageIndex: bill.progress.filter((s) => s.done).length,
   };
 }
@@ -222,7 +344,8 @@ function sponsorPersonFrom(raw: LegisinfoBillDetail): SponsorPerson | null {
 }
 
 /** Map a raw LEGISinfo item into our normalized shape. Pure + unit-testable. */
-export function normalizeBill(raw: LegisinfoBillSummary): NormalizedBill {
+export function normalizeBill(source: LegisinfoRawBill): NormalizedBill {
+  const raw = toSummary(source);
   const currentStatus = raw.CurrentStatusEn?.trim() || raw.LatestCompletedMajorStageEn || null;
   return {
     billNumber: raw.BillNumberFormatted,
@@ -244,7 +367,8 @@ export function normalizeBill(raw: LegisinfoBillSummary): NormalizedBill {
       raw.LatestCompletedMajorStageEn ?? "",
       raw.LatestActivityDateTime ?? "",
     ].join("|"),
-    source: raw,
+    activityDate: raw.LatestActivityDateTime ?? null,
+    source,
   };
 }
 
@@ -266,7 +390,7 @@ async function getJson<T>(url: string): Promise<T> {
  * so the sync job does not need per-bill requests.
  */
 export async function fetchBills(parlSessionCode: string): Promise<NormalizedBill[]> {
-  const raw = await getJson<LegisinfoBillSummary[]>(
+  const raw = await getJson<LegisinfoRawBill[]>(
     `${BASE}/bills/json?parlsession=${encodeURIComponent(parlSessionCode)}`,
   );
   return raw.map(normalizeBill);
@@ -308,4 +432,46 @@ export async function fetchSponsorPerson(
   );
   if (!raw || raw.length === 0) return null;
   return sponsorPersonFrom(raw[0]);
+}
+
+/** Per-bill requests in flight at once when filling in list records. */
+const DETAIL_CONCURRENCY = 4;
+
+/**
+ * Like `fetchBills`, but replaces each list record with the full per-bill record, which
+ * carries the sponsor and the real latest-activity date that the list leaves out. Falls
+ * back to the list record for any bill whose detail request fails. Used by the sync job;
+ * about one request per bill, so keep it off request paths.
+ */
+export async function fetchBillsWithDetails(parlSessionCode: string): Promise<NormalizedBill[]> {
+  const list = await getJson<LegisinfoRawBill[]>(
+    `${BASE}/bills/json?parlsession=${encodeURIComponent(parlSessionCode)}`,
+  );
+  const out: LegisinfoRawBill[] = new Array(list.length);
+  let next = 0;
+  async function worker() {
+    while (next < list.length) {
+      const i = next++;
+      out[i] = await detailOrFallback(parlSessionCode, list[i]);
+    }
+  }
+  await Promise.all(Array.from({ length: DETAIL_CONCURRENCY }, worker));
+  return out.map(normalizeBill);
+}
+
+async function detailOrFallback(
+  parlSessionCode: string,
+  raw: LegisinfoRawBill,
+): Promise<LegisinfoRawBill> {
+  if (!isBillRecord(raw)) return raw;
+  try {
+    const detail = await getJson<LegisinfoRawBill[]>(
+      `${BASE}/bill/${parlSessionCode}/${raw.NumberCode.toLowerCase()}/json`,
+    );
+    const record = detail?.[0];
+    return record && isBillRecord(record) && record.NumberCode === raw.NumberCode ? record : raw;
+  } catch (err) {
+    console.error(`[legisinfo] detail fetch failed for ${raw.NumberCode}; using list record`, err);
+    return raw;
+  }
 }
