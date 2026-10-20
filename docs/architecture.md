@@ -14,7 +14,7 @@ changes), and the **notifier** (sends emails).
                           ┌──────▼───────┐
                           │  Supabase    │  bills, bill_status_history,
                           │  (Postgres)  │  subscribers, subscriptions,
-                          └──────┬───────┘  notifications_outbox
+                          └──────┬───────┘  notifications_outbox, digest_outbox
                                  │
         ┌────────────────────────┼─────────────────────────┐
         │                        │                          │
@@ -37,8 +37,16 @@ changes), and the **notifier** (sends emails).
    - **Changed bill** → new `bill_status_history` row + one `notifications_outbox` row per
      confirmed subscriber. The `(subscriber_id, status_history_id)` unique constraint makes
      re-runs idempotent.
-4. The **notifier** (added in v1) drains `notifications_outbox` via Resend and marks rows
-   `sent` / `failed`.
+4. The **notifier** drains `notifications_outbox` via Resend and marks rows
+   `sent` / `failed`. Per-bill alerts are unchanged.
+5. **Weekly digest** (opt-in only, its own cron: `/api/cron/digest`, daily at 13:00 UTC =
+   9am EDT / 8am EST). On Mondays (Ottawa time), if any `bill_status_history` rows were
+   detected in the previous seven Ottawa days (Monday to Sunday), enqueue one
+   `digest_outbox` row per confirmed subscriber with `digest_opt_in = true`; every run then
+   drains pending rows, so a failed send retries the next morning with the same week's
+   list. Existing per-bill subscribers are **not** enrolled (`digest_opt_in` defaults to
+   false). Quiet weeks send nothing. Unique `(subscriber_id, digest_date)` makes re-runs
+   idempotent. Digest unsubscribe (`?list=digest`) only clears the flag.
 
 ## Why the change signal is stored, not recomputed
 
