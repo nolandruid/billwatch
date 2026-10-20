@@ -13,6 +13,8 @@
  * Be a good citizen: identify ourselves via User-Agent and poll on a modest interval.
  */
 
+import { categorizeBill, type Category } from "@/lib/categories";
+
 const BASE = "https://www.parl.ca/legisinfo/en";
 const USER_AGENT = "BillWatch/0.1 (+https://billwatch.ca; bill-status notifications)";
 
@@ -242,6 +244,7 @@ export interface BillListItem {
   activityDate: string | null;
   /** Number of completed progress steps, used for "furthest along" sorting. */
   stageIndex: number;
+  categories: Category[];
 }
 
 export function toListItem(bill: NormalizedBill, photoUrl: string | null): BillListItem {
@@ -261,6 +264,7 @@ export function toListItem(bill: NormalizedBill, photoUrl: string | null): BillL
     photoUrl,
     activityDate: bill.activityDate,
     stageIndex: bill.progress.filter((s) => s.done).length,
+    categories: categorizeBill(bill),
   };
 }
 

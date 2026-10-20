@@ -1,5 +1,6 @@
 import { sponsorKey } from "@/lib/sponsors";
 import type { BillListItem, Chamber } from "@/lib/legisinfo";
+import { isCategory, queryMatchesCategory, type Category } from "@/lib/categories";
 
 /** Fits the 3-column card grid (6 rows) and stays at or under the ~20-per-page target. */
 export const BILL_PAGE_SIZE = 18;
@@ -7,6 +8,7 @@ export const BILL_PAGE_SIZE = 18;
 export type SortKey = "recent" | "number" | "progress";
 export type ChamberFilter = "all" | Chamber;
 export type StatusFilter = "all" | "proposed" | "active" | "passed" | "died";
+export type TopicFilter = "all" | Category;
 
 export interface BillListState {
   query: string;
@@ -14,6 +16,7 @@ export interface BillListState {
   chamber: ChamberFilter;
   sponsor: string;
   status: StatusFilter;
+  topic: TopicFilter;
   page: number;
 }
 
@@ -23,6 +26,7 @@ export const BILL_LIST_DEFAULTS: BillListState = {
   chamber: "all",
   sponsor: "all",
   status: "all",
+  topic: "all",
   page: 1,
 };
 
@@ -55,7 +59,7 @@ export function compareBills(a: BillListItem, b: BillListItem, sort: SortKey): n
 
 export function filterAndSortBills(
   bills: BillListItem[],
-  state: Pick<BillListState, "query" | "sort" | "chamber" | "sponsor" | "status">,
+  state: Pick<BillListState, "query" | "sort" | "chamber" | "sponsor" | "status" | "topic">,
 ): BillListItem[] {
   const q = state.query.trim().toLowerCase();
   const compact = q.replace(/[\s-]/g, "");
@@ -63,6 +67,7 @@ export function filterAndSortBills(
     if (state.chamber !== "all" && b.chamber !== state.chamber) return false;
     if (state.sponsor !== "all" && b.sponsor !== state.sponsor) return false;
     if (state.status !== "all" && statusCategory(b) !== state.status) return false;
+    if (state.topic !== "all" && !b.categories.includes(state.topic)) return false;
     if (!q) return true;
     const num = b.billNumber.toLowerCase();
     return (
@@ -70,7 +75,8 @@ export function filterAndSortBills(
       num.replace("-", "").includes(compact) ||
       b.title.toLowerCase().includes(q) ||
       (b.shortTitle?.toLowerCase().includes(q) ?? false) ||
-      (b.sponsor?.toLowerCase().includes(q) ?? false)
+      (b.sponsor?.toLowerCase().includes(q) ?? false) ||
+      b.categories.some((c) => queryMatchesCategory(q, c))
     );
   });
   return result.sort((a, b) => compareBills(a, b, state.sort));
@@ -129,12 +135,15 @@ export function parseBillListSearchParams(params: {
       ? statusRaw
       : "all";
   const sponsor = params.get("sponsor")?.trim() || "all";
+  const topicRaw = params.get("topic");
+  const topic: TopicFilter = isCategory(topicRaw) ? topicRaw : "all";
   return {
     query: params.get("q") ?? "",
     sort,
     chamber,
     sponsor,
     status,
+    topic,
     page: parsePageParam(params.get("page")),
   };
 }
@@ -146,6 +155,7 @@ export function serializeBillListSearchParams(state: BillListState): string {
   if (q) params.set("q", q);
   if (state.chamber !== "all") params.set("chamber", state.chamber);
   if (state.status !== "all") params.set("status", state.status);
+  if (state.topic !== "all") params.set("topic", state.topic);
   if (state.sponsor !== "all") params.set("sponsor", state.sponsor);
   if (state.sort !== "recent") params.set("sort", state.sort);
   if (state.page > 1) params.set("page", String(state.page));

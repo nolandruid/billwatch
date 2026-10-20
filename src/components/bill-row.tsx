@@ -3,6 +3,7 @@ import { SponsorAvatar } from "@/components/sponsor-avatar";
 import { StatusBadge, stageMeta } from "@/components/status-badge";
 import { ProgressTracker } from "@/components/progress-tracker";
 import { NotifyDialog } from "@/components/notify-dialog";
+import { CategoryChips } from "@/components/category-chips";
 import { chamberLabel } from "@/lib/legisinfo";
 import type { BillListItem } from "@/lib/legisinfo";
 
@@ -68,6 +69,7 @@ export function BillRow({ item }: { item: BillListItem }) {
           {description}
         </p>
       )}
+      <CategoryChips categories={item.categories} className="mt-3" />
 
       {/* Spacer keeps progress + footer aligned across cards of differing text length */}
       <div className="flex-1" />

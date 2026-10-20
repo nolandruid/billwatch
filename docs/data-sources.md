@@ -47,6 +47,14 @@ We surface a "Source: LEGISinfo" link on every bill page and in every email. Par
 data is open government data. Technical contact for the data: `infonet@parl.gc.ca`. If
 Parliament publishes formal terms or a different preferred access method, we will adopt it.
 
+### Topic categories (derived, not from LEGISinfo)
+
+LEGISinfo has no subject tags, so each bill's topics (AI, Crypto, Housing, …) are derived in
+[`src/lib/categories.ts`](../src/lib/categories.ts): keyword rules over the long and short
+titles, plus `CURATED_CATEGORIES` for omnibus bills whose titles hide what they contain (for
+example C-15's stablecoin framework). Add to that list when a measure can't be found by topic.
+The sync also writes them to `bills.categories`.
+
 ## Inspiration & benchmarks (not data sources)
 
 - **[GovTrack.us](https://www.govtrack.us/)** — the US gold standard for public bill tracking
