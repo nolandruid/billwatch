@@ -18,6 +18,7 @@ values; only `.env.example` is tracked.
 | `CRON_SECRET`                   | cron route        | Bearer token guarding `/api/cron/*`. |
 | `NEXT_PUBLIC_TALLY_FORM_ID`     | feedback (client) | Public Tally form id; opens the feedback popup. |
 | `NEXT_PUBLIC_SITE_URL`          | email links       | Public base URL.                   |
+| `OWNER_NOTIFY_EMAIL`            | owner emails      | Gets signup alerts and the weekly status report. Unset turns both off. |
 
 ## The sync job
 
@@ -57,6 +58,19 @@ A failure emails the repo owner and opens a `health-check` issue with the failin
 and later failures comment on the same issue. The issue closes itself on the next passing
 run. Run the same checks locally with `npm run health`; set `HEALTH_SITE_URL` to point at a
 preview deployment.
+
+## Weekly status report
+
+`/api/cron/weekly-report` emails `OWNER_NOTIFY_EMAIL` every Monday at 13:00 UTC (8am EST /
+9am EDT) with the last 7 days: sync runs (count, failures, average and slowest duration,
+changes detected), subscribers (confirmed, new this week, unconfirmed), bill subscriptions,
+and notification emails sent and failed. The subject says "all good" or how many issues need
+a look: days with no recorded run, failed or over-budget runs, failed emails. Send one now
+with:
+
+```bash
+curl "$NEXT_PUBLIC_SITE_URL/api/cron/weekly-report" -H "Authorization: Bearer $CRON_SECRET"
+```
 
 ## Adding a new parliamentary session
 

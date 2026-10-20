@@ -106,3 +106,30 @@ export function healthProblems(s: HealthSnapshot, now: Date = new Date()): strin
 
   return problems;
 }
+
+/** Map a `sync_runs` row onto SyncRun. */
+export function toSyncRun(row: {
+  started_at: string;
+  duration_ms: number;
+  sync_ms: number;
+  ok: boolean;
+  error: string | null;
+  fetched: number;
+  inserted: number;
+  changed: number;
+  notifications_queued: number;
+  emails_sent: number;
+}): SyncRun {
+  return {
+    startedAt: row.started_at,
+    durationMs: row.duration_ms,
+    syncMs: row.sync_ms,
+    ok: row.ok,
+    error: row.error,
+    fetched: row.fetched,
+    inserted: row.inserted,
+    changed: row.changed,
+    notificationsQueued: row.notifications_queued,
+    emailsSent: row.emails_sent,
+  };
+}

@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncAll, type SyncResult } from "@/lib/sync";
 import { drainOutbox } from "@/lib/notify";
+import { isCronAuthorized } from "@/lib/cron-auth";
 
 /**
  * Cron-triggered sync + notify. Pulls the latest bill data from LEGISinfo, detects status
@@ -13,15 +14,8 @@ import { drainOutbox } from "@/lib/notify";
 export const dynamic = "force-dynamic"; // always run fresh, never cache
 export const maxDuration = 60;
 
-function isAuthorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false; // fail closed if misconfigured
-  const header = request.headers.get("authorization");
-  return header === `Bearer ${secret}`;
-}
-
 async function handle(request: Request): Promise<Response> {
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
   const startedAt = new Date();

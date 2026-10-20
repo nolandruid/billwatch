@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { healthProblems, type HealthSnapshot, type SyncRun } from "@/lib/health";
+import { healthProblems, toSyncRun, type HealthSnapshot } from "@/lib/health";
 
 /**
  * Health snapshot for the daily check in `.github/workflows/health.yml`. Public, so it
@@ -61,31 +61,5 @@ async function readSnapshot(): Promise<HealthSnapshot> {
     bills: bills.count ?? 0,
     outbox: { failedRecently: failed.count ?? 0, stuckPending: stuck.count ?? 0 },
     lastRun: run.data ? toSyncRun(run.data) : null,
-  };
-}
-
-function toSyncRun(row: {
-  started_at: string;
-  duration_ms: number;
-  sync_ms: number;
-  ok: boolean;
-  error: string | null;
-  fetched: number;
-  inserted: number;
-  changed: number;
-  notifications_queued: number;
-  emails_sent: number;
-}): SyncRun {
-  return {
-    startedAt: row.started_at,
-    durationMs: row.duration_ms,
-    syncMs: row.sync_ms,
-    ok: row.ok,
-    error: row.error,
-    fetched: row.fetched,
-    inserted: row.inserted,
-    changed: row.changed,
-    notificationsQueued: row.notifications_queued,
-    emailsSent: row.emails_sent,
   };
 }
