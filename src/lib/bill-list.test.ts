@@ -30,6 +30,7 @@ function item(overrides: Partial<BillListItem> = {}): BillListItem {
     photoUrl: null,
     activityDate: "2026-01-01T00:00:00",
     stageIndex: 1,
+    categories: [],
     ...overrides,
   };
 }
@@ -97,6 +98,7 @@ describe("filterAndSortBills", () => {
     chamber: "all" as const,
     sponsor: "all",
     status: "all" as const,
+    topic: "all" as const,
   };
 
   it("filters by chamber, status, and sponsor without dropping the others", () => {
@@ -149,6 +151,35 @@ describe("filterAndSortBills", () => {
     expect(
       filterAndSortBills(bills, { ...base, sort: "progress" }).map((b) => b.billNumber),
     ).toEqual(["C-15", "C-2", "S-2"]);
+  });
+});
+
+describe("filterAndSortBills topics", () => {
+  const defaults = {
+    query: "",
+    sort: "number" as const,
+    chamber: "all" as const,
+    sponsor: "all",
+    status: "all" as const,
+    topic: "all" as const,
+  };
+  const bills = [
+    item({
+      billNumber: "C-15",
+      title: "Budget 2025 Implementation Act",
+      categories: ["crypto", "tax"],
+    }),
+    item({ billNumber: "C-20", title: "An Act respecting housing", categories: ["housing"] }),
+  ];
+
+  it("filters by topic", () => {
+    const result = filterAndSortBills(bills, { ...defaults, topic: "crypto" });
+    expect(result.map((b) => b.billNumber)).toEqual(["C-15"]);
+  });
+
+  it("finds a bill by a topic its title doesn't mention", () => {
+    const result = filterAndSortBills(bills, { ...defaults, query: "Stablecoin Act" });
+    expect(result.map((b) => b.billNumber)).toEqual(["C-15"]);
   });
 });
 
@@ -208,6 +239,7 @@ describe("paginate", () => {
       chamber: "all",
       sponsor: "all",
       status: "all",
+      topic: "all",
     });
     expect(filtered).toHaveLength(25);
     const page2 = paginate(filtered, 2);
@@ -237,19 +269,20 @@ describe("parseBillListSearchParams / serializeBillListSearchParams", () => {
       chamber: "senate" as const,
       sponsor: "Sen. Judith Seidman",
       status: "active" as const,
+      topic: "housing" as const,
       page: 2,
     };
     const qs = serializeBillListSearchParams(state);
     const parsed = parseBillListSearchParams(new URLSearchParams(qs));
     expect(parsed).toEqual(state);
     expect(serializeBillListSearchParams({ ...state, query: "", sort: "recent", page: 1 })).toBe(
-      "chamber=senate&status=active&sponsor=Sen.+Judith+Seidman",
+      "chamber=senate&status=active&topic=housing&sponsor=Sen.+Judith+Seidman",
     );
   });
 
   it("falls back to defaults for unknown values", () => {
     const parsed = parseBillListSearchParams(
-      new URLSearchParams("sort=popular&chamber=commons&status=maybe&page=abc"),
+      new URLSearchParams("sort=popular&chamber=commons&status=maybe&topic=sports&page=abc"),
     );
     expect(parsed).toEqual({
       query: "",
@@ -257,6 +290,7 @@ describe("parseBillListSearchParams / serializeBillListSearchParams", () => {
       chamber: "all",
       sponsor: "all",
       status: "all",
+      topic: "all",
       page: 1,
     });
   });

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchBillsWithDetails, type NormalizedBill } from "@/lib/legisinfo";
+import { categorizeBill } from "@/lib/categories";
 
 /** Sessions to sync. Add new sessions here as Parliament opens them. */
 export const ACTIVE_SESSIONS = ["45-1"];
@@ -111,6 +112,7 @@ async function upsertBill(supabase: SupabaseClient, bill: NormalizedBill): Promi
         current_status: bill.currentStatus,
         current_stage: bill.currentStage,
         chamber: bill.chamber,
+        categories: categorizeBill(bill),
         legisinfo_url: bill.legisinfoUrl,
         source_json: bill.source,
         last_synced_at: new Date().toISOString(),

@@ -7,6 +7,8 @@ import { fetchSponsorPhotoMap, photoForSponsor } from "@/lib/sponsors";
 import { SponsorAvatar } from "@/components/sponsor-avatar";
 import { StatusBadge } from "@/components/status-badge";
 import { ProgressTracker } from "@/components/progress-tracker";
+import { CategoryChips } from "@/components/category-chips";
+import { categorizeBill } from "@/lib/categories";
 import { SubscribeCard } from "@/components/subscribe-card";
 
 export const revalidate = 3600;
@@ -92,6 +94,7 @@ export default async function BillPage({ params }: { params: Promise<{ slug: str
             <span>Originated in the {chamberLabel(bill.originatingChamber)}</span>
           )}
         </div>
+        <CategoryChips categories={categorizeBill(bill)} linked className="mt-3" />
       </header>
 
       {/* Progress */}

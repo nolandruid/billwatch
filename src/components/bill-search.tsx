@@ -11,6 +11,7 @@ import {
   type ChamberFilter,
   type SortKey,
   type StatusFilter,
+  type TopicFilter,
   filterAndSortBills,
   paginate,
   parseBillListSearchParams,
@@ -18,6 +19,7 @@ import {
   uniqueSponsors,
 } from "@/lib/bill-list";
 import type { BillListItem } from "@/lib/legisinfo";
+import { CATEGORIES, categoryLabel } from "@/lib/categories";
 
 const LEGEND: { label: string; dot: string }[] = [
   { label: "Introduced", dot: "bg-intro" },
@@ -87,7 +89,8 @@ export function BillSearch({ bills }: { bills: BillListItem[] }) {
     parsed.query.trim() ||
     parsed.chamber !== "all" ||
     parsed.sponsor !== "all" ||
-    parsed.status !== "all";
+    parsed.status !== "all" ||
+    parsed.topic !== "all";
 
   const selectClass =
     "rounded-md border border-mauve-deep/20 bg-card px-2.5 py-1.5 text-sm text-foreground shadow-sm outline-none focus:border-brand";
@@ -142,6 +145,21 @@ export function BillSearch({ bills }: { bills: BillListItem[] }) {
               <option value="active">In progress</option>
               <option value="passed">Passed</option>
               <option value="died">Died</option>
+            </select>
+          </label>
+          <label className="text-foreground/50 flex items-center gap-1.5 text-xs">
+            Topic
+            <select
+              value={parsed.topic}
+              onChange={(e) => setFilter({ topic: e.target.value as TopicFilter })}
+              className={selectClass}
+            >
+              <option value="all">All topics</option>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {categoryLabel(c)}
+                </option>
+              ))}
             </select>
           </label>
           <label className="text-foreground/50 flex items-center gap-1.5 text-xs">
