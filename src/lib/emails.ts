@@ -51,8 +51,10 @@ export function notificationEmail(opts: {
   status: string;
   billUrl: string;
   unsubscribeUrl: string;
+  /** Set for subscribers not yet on the digest, to offer it. Null hides the line. */
+  digestSignupUrl?: string | null;
 }): { subject: string; html: string; text: string } {
-  const { billNumber, billTitle, status, billUrl, unsubscribeUrl } = opts;
+  const { billNumber, billTitle, status, billUrl, unsubscribeUrl, digestSignupUrl } = opts;
   const subject = `${billNumber} just changed status`;
   const html = layout(
     `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;">${billNumber} &middot; ${escapeHtml(
@@ -61,7 +63,14 @@ export function notificationEmail(opts: {
      <p style="margin:0 0 16px;font-size:18px;font-weight:600;">${escapeHtml(status)}</p>
      <a href="${billUrl}" style="display:inline-block;background:${BRAND};color:#fff;
        text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px;">
-       View ${billNumber} on BillWatch</a>`,
+       View ${billNumber} on BillWatch</a>${
+         digestSignupUrl
+           ? `
+     <p style="margin:20px 0 0;font-size:14px;color:#4b5563;">Want every bill that moved, in one
+       email after the sitting day? <a href="${digestSignupUrl}" style="color:${BRAND};">Get the
+       sitting-end digest</a>.</p>`
+           : ""
+       }`,
     `You're getting this because you subscribed to ${billNumber} on billwatch.ca.
      <a href="${unsubscribeUrl}" style="color:#6b7280;">Unsubscribe</a>.
      BillWatch is an independent, open-source project, not affiliated with the Government of Canada.`,
@@ -70,7 +79,13 @@ export function notificationEmail(opts: {
 ${status}
 
 View on BillWatch: ${billUrl}
-
+${
+  digestSignupUrl
+    ? `
+Want every bill that moved, in one email after the sitting day? Get the sitting-end digest: ${digestSignupUrl}
+`
+    : ""
+}
 Unsubscribe: ${unsubscribeUrl}
 BillWatch is independent and not affiliated with the Government of Canada.`;
   return { subject, html, text };

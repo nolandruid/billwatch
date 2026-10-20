@@ -7,7 +7,7 @@ const MAX_ATTEMPTS = 3;
 interface OutboxRow {
   id: string;
   attempts: number;
-  subscribers: { email: string; unsubscribe_token: string };
+  subscribers: { email: string; unsubscribe_token: string; digest_opt_in: boolean };
   bills: { bill_number: string; title: string };
   bill_status_history: { status: string | null };
 }
@@ -24,7 +24,7 @@ export async function drainOutbox(
   const { data, error } = await supabase
     .from("notifications_outbox")
     .select(
-      "id, attempts, subscribers!inner(email, unsubscribe_token), bills!inner(bill_number, title), bill_status_history!inner(status)",
+      "id, attempts, subscribers!inner(email, unsubscribe_token, digest_opt_in), bills!inner(bill_number, title), bill_status_history!inner(status)",
     )
     .eq("state", "pending")
     .limit(limit);
@@ -47,6 +47,8 @@ export async function drainOutbox(
         status,
         billUrl,
         unsubscribeUrl,
+        // Offer the digest to anyone not already on it.
+        digestSignupUrl: row.subscribers.digest_opt_in ? null : `${siteUrl()}/#digest`,
       }),
       // Gmail/Outlook one-click unsubscribe.
       headers: {
