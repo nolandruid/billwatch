@@ -39,13 +39,14 @@ changes), and the **notifier** (sends emails).
      re-runs idempotent.
 4. The **notifier** drains `notifications_outbox` via Resend and marks rows
    `sent` / `failed`. Per-bill alerts are unchanged.
-5. **Sitting-end digest** (opt-in only): if any `bill_status_history` rows were
-   detected on today's America/Toronto date, enqueue one `digest_outbox` row per
-   confirmed subscriber with `digest_opt_in = true`, then drain. Existing per-bill
-   subscribers are **not** enrolled (`digest_opt_in` defaults to false). Empty
-   days send nothing. Only runs at or after 5pm Ottawa queue it, so an earlier sync
-   (e.g. a midday run) doesn't send a half-day digest. Unique
-   `(subscriber_id, sitting_date)` makes re-runs idempotent. Digest unsubscribe (`?list=digest`) only clears the flag.
+5. **Weekly digest** (opt-in only, its own cron: `/api/cron/digest`, daily at 13:00 UTC =
+   9am EDT / 8am EST). On Mondays (Ottawa time), if any `bill_status_history` rows were
+   detected in the previous seven Ottawa days (Monday to Sunday), enqueue one
+   `digest_outbox` row per confirmed subscriber with `digest_opt_in = true`; every run then
+   drains pending rows, so a failed send retries the next morning with the same week's
+   list. Existing per-bill subscribers are **not** enrolled (`digest_opt_in` defaults to
+   false). Quiet weeks send nothing. Unique `(subscriber_id, digest_date)` makes re-runs
+   idempotent. Digest unsubscribe (`?list=digest`) only clears the flag.
 
 ## Why the change signal is stored, not recomputed
 

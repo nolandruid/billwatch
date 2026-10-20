@@ -16,7 +16,7 @@ describe("notificationEmail digest offer", () => {
       digestSignupUrl: "https://billwatch.ca/#digest",
     });
     expect(html).toContain('href="https://billwatch.ca/#digest"');
-    expect(text).toContain("Get the sitting-end digest: https://billwatch.ca/#digest");
+    expect(text).toContain("Get the weekly digest: https://billwatch.ca/#digest");
   });
 
   it("leaves it out for subscribers already on the digest", () => {

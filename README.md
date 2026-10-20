@@ -25,8 +25,8 @@ Royal Assent, and so on. No manual checking of the Parliament website required.
    status and queues a notification for every confirmed subscriber to that bill.
 3. A sender drains the queue and emails those subscribers, linking to our bill page **and** the
    official LEGISinfo page.
-4. Separately, people can opt into a **sitting-end digest**: one email after the evening sync
-   listing every bill that moved that day. Existing per-bill subscribers are not enrolled.
+4. Separately, people can opt into a **weekly digest**: one email every Monday morning
+   listing every bill that moved the week before. Existing per-bill subscribers are not enrolled.
 
 Full design: [`docs/architecture.md`](./docs/architecture.md).
 

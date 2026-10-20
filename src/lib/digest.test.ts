@@ -2,12 +2,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createFakeSupabase } from "@/lib/fake-supabase";
 import { digestEmail } from "@/lib/emails";
 import {
+  digestWindow,
+  isDigestDay,
+  ottawaDate,
   selectDigestBills,
-  sittingDateInOttawa,
-  sendSittingDigest,
-  isDigestTime,
+  sendWeeklyDigest,
   type DigestHistoryRow,
 } from "@/lib/digest";
+
+// Monday 2026-09-14 at 13:05 UTC = 9:05am EDT: the digest run. It covers Sep 7-13.
+const MONDAY_RUN = new Date("2026-09-14T13:05:00.000Z");
+const TUESDAY_RUN = new Date("2026-09-15T13:05:00.000Z");
 
 vi.mock("@/lib/resend", () => ({
   sendEmail: vi.fn(async () => true),
@@ -31,24 +36,28 @@ function history(
   };
 }
 
-describe("sittingDateInOttawa", () => {
-  it("keeps 23:00 UTC on the same Ottawa calendar day (evening cron)", () => {
-    // 23:00 UTC is 18:00 EST / 19:00 EDT, still that date in America/Toronto.
-    expect(sittingDateInOttawa(new Date("2026-09-03T23:00:00.000Z"))).toBe("2026-09-03");
-    expect(sittingDateInOttawa(new Date("2026-01-15T23:00:00.000Z"))).toBe("2026-01-15");
-  });
-
-  it("rolls to the next Ottawa day after midnight Eastern", () => {
-    expect(sittingDateInOttawa(new Date("2026-09-04T04:30:00.000Z"))).toBe("2026-09-04");
+describe("ottawaDate", () => {
+  it("uses the Ottawa calendar date", () => {
+    expect(ottawaDate(new Date("2026-09-03T23:00:00.000Z"))).toBe("2026-09-03");
+    expect(ottawaDate(new Date("2026-09-04T03:30:00.000Z"))).toBe("2026-09-03");
+    expect(ottawaDate(new Date("2026-09-04T04:30:00.000Z"))).toBe("2026-09-04");
   });
 });
 
-describe("isDigestTime", () => {
-  it("is false for the midday run and true for the evening run, in both EST and EDT", () => {
-    expect(isDigestTime(new Date("2026-09-03T17:00:00Z"))).toBe(false); // 1pm EDT
-    expect(isDigestTime(new Date("2026-09-03T23:00:00Z"))).toBe(true); // 7pm EDT
-    expect(isDigestTime(new Date("2026-12-03T17:59:00Z"))).toBe(false); // 12:59pm EST
-    expect(isDigestTime(new Date("2026-12-03T23:00:00Z"))).toBe(true); // 6pm EST
+describe("isDigestDay", () => {
+  it("is true only on Monday in Ottawa, in both EDT and EST", () => {
+    expect(isDigestDay(MONDAY_RUN)).toBe(true);
+    expect(isDigestDay(TUESDAY_RUN)).toBe(false);
+    expect(isDigestDay(new Date("2026-12-07T13:05:00.000Z"))).toBe(true); // 8:05am EST Monday
+    // 02:00 UTC Monday is still Sunday evening in Ottawa.
+    expect(isDigestDay(new Date("2026-09-14T02:00:00.000Z"))).toBe(false);
+  });
+});
+
+describe("digestWindow", () => {
+  it("covers the seven days before the digest date", () => {
+    expect(digestWindow("2026-09-14")).toEqual({ from: "2026-09-07", to: "2026-09-13" });
+    expect(digestWindow("2027-01-04")).toEqual({ from: "2026-12-28", to: "2027-01-03" });
   });
 });
 
@@ -69,21 +78,17 @@ describe("selectDigestBills", () => {
     legisinfo_url: "https://www.parl.ca/legisinfo/en/bill/45-1/c-2",
   };
 
-  it("includes only rows detected on the Ottawa sitting date", () => {
+  it("includes only rows detected in the week before the digest date (Ottawa time)", () => {
     const bills = selectDigestBills(
       [
-        history({
-          detected_at: "2026-09-02T23:00:00.000Z",
-          status: "Introduced",
-          bills: c15,
-        }),
-        history({
-          detected_at: "2026-09-03T23:00:00.000Z",
-          status: "Royal assent",
-          bills: c2,
-        }),
+        // Sunday Sep 6, 11pm EDT: the week before.
+        history({ detected_at: "2026-09-07T03:00:00.000Z", status: "Introduced", bills: c15 }),
+        // Sunday Sep 13, 11pm EDT: last day of the window.
+        history({ detected_at: "2026-09-14T03:00:00.000Z", status: "Royal assent", bills: c2 }),
+        // Monday Sep 14, morning: next week's digest.
+        history({ detected_at: "2026-09-14T12:00:00.000Z", status: "Introduced", bills: s2 }),
       ],
-      "2026-09-03",
+      "2026-09-14",
     );
     expect(bills.map((b) => b.billNumber)).toEqual(["C-2"]);
     expect(bills[0]?.status).toBe("Royal assent");
@@ -93,17 +98,17 @@ describe("selectDigestBills", () => {
     const bills = selectDigestBills(
       [
         history({
-          detected_at: "2026-09-03T12:00:00.000Z",
+          detected_at: "2026-09-08T17:00:00.000Z",
           status: "First reading",
           bills: c15,
         }),
         history({
-          detected_at: "2026-09-03T23:00:00.000Z",
+          detected_at: "2026-09-10T23:00:00.000Z",
           status: "Second reading",
           bills: c15,
         }),
       ],
-      "2026-09-03",
+      "2026-09-14",
     );
     expect(bills).toHaveLength(1);
     expect(bills[0]?.status).toBe("Second reading");
@@ -112,16 +117,16 @@ describe("selectDigestBills", () => {
   it("sorts by bill number and unwraps array-shaped joins", () => {
     const bills = selectDigestBills(
       [
-        history({ detected_at: "2026-09-03T23:00:00.000Z", bills: [s2] }),
-        history({ detected_at: "2026-09-03T23:00:00.000Z", bills: c15 }),
-        history({ detected_at: "2026-09-03T23:00:00.000Z", bills: c2 }),
+        history({ detected_at: "2026-09-08T23:00:00.000Z", bills: [s2] }),
+        history({ detected_at: "2026-09-09T23:00:00.000Z", bills: c15 }),
+        history({ detected_at: "2026-09-10T23:00:00.000Z", bills: c2 }),
       ],
-      "2026-09-03",
+      "2026-09-14",
     );
     expect(bills.map((b) => b.billNumber)).toEqual(["C-2", "C-15", "S-2"]);
   });
 
-  it("returns an empty list when nothing moved that day", () => {
+  it("returns an empty list when nothing moved that week", () => {
     expect(
       selectDigestBills(
         [
@@ -130,7 +135,7 @@ describe("selectDigestBills", () => {
             bills: c15,
           }),
         ],
-        "2026-09-03",
+        "2026-09-14",
       ),
     ).toEqual([]);
   });
@@ -139,7 +144,7 @@ describe("selectDigestBills", () => {
 describe("digestEmail", () => {
   it("links each bill to BillWatch and LEGISinfo", () => {
     const mail = digestEmail({
-      sittingDate: "2026-09-03",
+      weekOf: { from: "2026-09-07", to: "2026-09-13" },
       unsubscribeUrl: "https://billwatch.ca/api/unsubscribe?token=t&list=digest",
       bills: [
         {
@@ -151,7 +156,8 @@ describe("digestEmail", () => {
         },
       ],
     });
-    expect(mail.subject).toBe("C-2 changed status today");
+    expect(mail.subject).toBe("This week in Parliament: C-2 moved");
+    expect(mail.text).toContain("from September 7, 2026 to September 13, 2026");
     expect(mail.html).toContain("https://billwatch.ca/bills/c-2");
     expect(mail.html).toContain("https://www.parl.ca/legisinfo/en/bill/45-1/c-2");
     expect(mail.html).toContain("list=digest");
@@ -161,7 +167,7 @@ describe("digestEmail", () => {
 
   it("pluralizes the subject when several bills moved", () => {
     const mail = digestEmail({
-      sittingDate: "2026-09-03",
+      weekOf: { from: "2026-09-07", to: "2026-09-13" },
       unsubscribeUrl: "https://billwatch.ca/api/unsubscribe?token=t&list=digest",
       bills: [
         {
@@ -180,11 +186,11 @@ describe("digestEmail", () => {
         },
       ],
     });
-    expect(mail.subject).toBe("2 bills changed status today");
+    expect(mail.subject).toBe("This week in Parliament: 2 bills moved");
   });
 });
 
-describe("sendSittingDigest", () => {
+describe("sendWeeklyDigest", () => {
   const billId = "bill-c2";
   const digestSub = {
     id: "sub-digest",
@@ -223,25 +229,25 @@ describe("sendSittingDigest", () => {
           bill_id: billId,
           status: "In committee",
           stage: "committee_house",
-          detected_at: "2026-09-03T23:00:00.000Z",
+          detected_at: "2026-09-10T23:00:00.000Z",
         },
       ],
     });
 
-    const result = await sendSittingDigest({ from } as never, new Date("2026-09-03T23:05:00.000Z"));
+    const result = await sendWeeklyDigest({ from } as never, MONDAY_RUN);
 
-    expect(result).toMatchObject({ sittingDate: "2026-09-03", bills: 1, queued: 1, sent: 1 });
+    expect(result).toMatchObject({ digestDate: "2026-09-14", bills: 1, queued: 1, sent: 1 });
     expect(sendEmailMock).toHaveBeenCalledTimes(1);
     const payload = sendEmailMock.mock.calls[0]?.[0];
     expect(payload?.to).toBe("digest@example.com");
-    expect(payload?.subject).toBe("C-2 changed status today");
+    expect(payload?.subject).toBe("This week in Parliament: C-2 moved");
     expect(payload?.html).toContain("/bills/c-2");
     expect(payload?.html).toContain("legisinfo");
     expect(db.digest_outbox).toHaveLength(1);
     expect(db.digest_outbox[0]?.state).toBe("sent");
   });
 
-  it("waits for the evening run: the midday sync sends nothing", async () => {
+  it("queues only on Monday", async () => {
     const { from, db } = createFakeSupabase({
       subscribers: [digestSub],
       bills: [
@@ -258,26 +264,55 @@ describe("sendSittingDigest", () => {
           bill_id: billId,
           status: "In committee",
           stage: "committee_house",
-          detected_at: "2026-09-03T17:00:00.000Z",
+          detected_at: "2026-09-10T17:00:00.000Z",
         },
       ],
     });
 
-    // 17:05 UTC = 1:05pm EDT: the midday run.
-    const midday = await sendSittingDigest({ from } as never, new Date("2026-09-03T17:05:00.000Z"));
-    expect(midday).toMatchObject({ bills: 1, queued: 0, sent: 0 });
+    // Tuesday's run only retries; it never queues a new digest.
+    const tuesday = await sendWeeklyDigest({ from } as never, TUESDAY_RUN);
+    expect(tuesday).toMatchObject({ bills: 0, queued: 0, sent: 0 });
     expect(sendEmailMock).not.toHaveBeenCalled();
 
-    // 23:05 UTC = 7:05pm EDT: the evening run sends it.
-    const evening = await sendSittingDigest(
-      { from } as never,
-      new Date("2026-09-03T23:05:00.000Z"),
-    );
-    expect(evening).toMatchObject({ bills: 1, queued: 1, sent: 1 });
+    // Monday's run sends it.
+    const monday = await sendWeeklyDigest({ from } as never, MONDAY_RUN);
+    expect(monday).toMatchObject({ bills: 1, queued: 1, sent: 1 });
     expect(db.digest_outbox).toHaveLength(1);
   });
 
-  it("does not enqueue or email when no bills changed that sitting day", async () => {
+  it("retries a failed send on the next day's run", async () => {
+    const { from, db } = createFakeSupabase({
+      subscribers: [digestSub],
+      bills: [
+        {
+          id: billId,
+          bill_number: "C-2",
+          title: "An Act to amend the Criminal Code",
+          legisinfo_url: "https://www.parl.ca/legisinfo/en/bill/45-1/c-2",
+        },
+      ],
+      bill_status_history: [
+        {
+          id: "hist-1",
+          bill_id: billId,
+          status: "In committee",
+          detected_at: "2026-09-10T23:00:00.000Z",
+        },
+      ],
+    });
+
+    sendEmailMock.mockResolvedValueOnce(false);
+    const monday = await sendWeeklyDigest({ from } as never, MONDAY_RUN);
+    expect(monday).toMatchObject({ queued: 1, sent: 0, failed: 1 });
+
+    const tuesday = await sendWeeklyDigest({ from } as never, TUESDAY_RUN);
+    expect(tuesday).toMatchObject({ queued: 0, sent: 1 });
+    // The retry still lists the week the digest was for.
+    expect(sendEmailMock.mock.calls[1]?.[0]?.subject).toBe("This week in Parliament: C-2 moved");
+    expect(db.digest_outbox[0]?.state).toBe("sent");
+  });
+
+  it("does not enqueue or email when no bills changed that week", async () => {
     const { from } = createFakeSupabase({
       subscribers: [digestSub],
       bills: [
@@ -298,7 +333,7 @@ describe("sendSittingDigest", () => {
       ],
     });
 
-    const result = await sendSittingDigest({ from } as never, new Date("2026-09-03T23:00:00.000Z"));
+    const result = await sendWeeklyDigest({ from } as never, MONDAY_RUN);
     expect(result).toMatchObject({ bills: 0, queued: 0, sent: 0 });
     expect(sendEmailMock).not.toHaveBeenCalled();
   });
@@ -319,14 +354,13 @@ describe("sendSittingDigest", () => {
           id: "hist-1",
           bill_id: billId,
           status: "In committee",
-          detected_at: "2026-09-03T23:00:00.000Z",
+          detected_at: "2026-09-10T23:00:00.000Z",
         },
       ],
     });
-    const now = new Date("2026-09-03T23:05:00.000Z");
-    await sendSittingDigest({ from } as never, now);
+    await sendWeeklyDigest({ from } as never, MONDAY_RUN);
     sendEmailMock.mockClear();
-    const again = await sendSittingDigest({ from } as never, now);
+    const again = await sendWeeklyDigest({ from } as never, MONDAY_RUN);
     expect(again.sent).toBe(0);
     expect(sendEmailMock).not.toHaveBeenCalled();
   });

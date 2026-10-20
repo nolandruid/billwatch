@@ -6,7 +6,7 @@ import { Mail, Check } from "lucide-react";
 type Status = "idle" | "sending" | "confirmation_sent" | "subscribed" | "error";
 
 /**
- * Homepage opt-in for the sitting-end digest. Separate from per-bill Notify me:
+ * Homepage opt-in for the weekly digest. Separate from per-bill Notify me:
  * one email after the House/Senate wrap, listing every bill that moved that day.
  */
 export function DigestSignup() {
@@ -49,7 +49,7 @@ export function DigestSignup() {
         <span className="bg-commons flex h-7 w-7 items-center justify-center rounded-full text-white">
           <Mail className="h-3.5 w-3.5" />
         </span>
-        <h2 className="font-display text-brand-darker text-xl font-semibold">Sitting-end digest</h2>
+        <h2 className="font-display text-brand-darker text-xl font-semibold">Weekly digest</h2>
       </div>
 
       {done ? (
@@ -59,12 +59,12 @@ export function DigestSignup() {
             {status === "confirmation_sent" ? (
               <>
                 Almost there: check your inbox and click the confirmation link to start getting the
-                sitting-end digest.
+                weekly digest.
               </>
             ) : (
               <>
-                You&apos;re on the digest. We&apos;ll email you once per sitting day when bills
-                change status.
+                You&apos;re on the digest. We&apos;ll email you every Monday morning with the bills
+                that changed status the week before.
               </>
             )}
           </p>
@@ -72,8 +72,8 @@ export function DigestSignup() {
       ) : (
         <>
           <p className="text-foreground/70 mt-2 text-sm leading-relaxed">
-            Prefer one email after the House and Senate wrap? We&apos;ll list every federal bill
-            that changed status that day, with links to BillWatch and LEGISinfo. Separate from
+            Prefer one email a week? Every Monday morning we&apos;ll list every federal bill that
+            changed status the week before, with links to BillWatch and LEGISinfo. Separate from
             per-bill alerts, and off unless you opt in.
           </p>
           <form onSubmit={submit} className="mt-4 flex flex-col gap-2 sm:flex-row">

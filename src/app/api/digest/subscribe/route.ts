@@ -4,7 +4,7 @@ import { subscribeToDigest } from "@/lib/subscriptions";
 export const dynamic = "force-dynamic";
 
 /**
- * POST { email } → opt into the sitting-end digest (CASL double opt-in).
+ * POST { email } → opt into the weekly digest (CASL double opt-in).
  * Does not create a per-bill subscription.
  */
 export async function POST(request: Request) {

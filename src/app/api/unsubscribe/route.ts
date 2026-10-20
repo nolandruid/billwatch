@@ -17,7 +17,7 @@ export async function GET(request: Request) {
         ? resultPage({
             title: "Digest unsubscribed",
             message:
-              "You won't receive the sitting-end digest. Alerts for any bills you track individually are unchanged.",
+              "You won't receive the weekly digest. Alerts for any bills you track individually are unchanged.",
           })
         : resultPage({
             title: "Link not valid",

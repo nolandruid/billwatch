@@ -175,7 +175,7 @@ async function notifyOwnerOfSignup(
 }
 
 /**
- * Opt into the sitting-end digest. Does not create a per-bill subscription, and is never
+ * Opt into the weekly digest. Does not create a per-bill subscription, and is never
  * implied by subscribeToBill: existing bill-trackers stay off the digest until they call this.
  * Same CASL double opt-in as per-bill mail.
  */
@@ -253,7 +253,7 @@ export async function unsubscribeByToken(
   return { ok: !error && !!data };
 }
 
-/** Stop the sitting-end digest only. Per-bill subscriptions stay in place. */
+/** Stop the weekly digest only. Per-bill subscriptions stay in place. */
 export async function unsubscribeDigestByToken(
   supabase: SupabaseClient,
   token: string | null,

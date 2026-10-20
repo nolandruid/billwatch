@@ -34,7 +34,7 @@ export interface DigestHistoryRow {
 interface DigestOutboxRow {
   id: string;
   attempts: number;
-  sitting_date: string;
+  digest_date: string;
   subscribers: {
     email: string;
     unsubscribe_token: string;
@@ -44,7 +44,7 @@ interface DigestOutboxRow {
 }
 
 export interface DigestSendResult {
-  sittingDate: string;
+  digestDate: string;
   bills: number;
   queued: number;
   sent: number;
@@ -52,33 +52,42 @@ export interface DigestSendResult {
 }
 
 /**
- * The sync also runs at midday (weekdays 17:00 UTC), but the digest covers the whole sitting
- * day and goes out once per subscriber per day, so only the evening run (23:00 UTC = 6pm EST /
- * 7pm EDT) may send it. 5pm Ottawa splits the two runs with an hour or more to spare on either
- * side, including across DST and Vercel Hobby's within-the-hour jitter.
+ * The digest is weekly: every Monday morning it lists each bill that changed status in the
+ * previous seven days (Monday to Sunday, Ottawa time). The cron route runs daily so failed
+ * sends retry the next morning, but only a Monday run queues a new digest.
  */
-export const DIGEST_EARLIEST_HOUR_OTTAWA = 17;
+export const DIGEST_WEEKDAY = "Mon";
 
-export function isDigestTime(now: Date = new Date()): boolean {
-  const hour = Number(
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: OTTAWA_TZ,
-      hour: "numeric",
-      hourCycle: "h23",
-    }).format(now),
+/** Whether `now` is the Ottawa weekday that queues a new digest. */
+export function isDigestDay(now: Date = new Date()): boolean {
+  return (
+    new Intl.DateTimeFormat("en-CA", { timeZone: OTTAWA_TZ, weekday: "short" }).format(now) ===
+    DIGEST_WEEKDAY
   );
-  return hour >= DIGEST_EARLIEST_HOUR_OTTAWA;
 }
 
 /** Ottawa calendar date (YYYY-MM-DD). Parliament sits on Eastern Time. */
-export function sittingDateInOttawa(now: Date = new Date()): string {
+export function ottawaDate(now: Date = new Date()): string {
   return now.toLocaleDateString("en-CA", { timeZone: OTTAWA_TZ });
 }
 
-export function isOnSittingDate(detectedAt: string, sittingDate: string): boolean {
+function addDays(ymd: string, days: number): string {
+  const d = new Date(`${ymd}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** The seven Ottawa dates a digest sent on `digestDate` covers: the week before it. */
+export function digestWindow(digestDate: string): { from: string; to: string } {
+  return { from: addDays(digestDate, -7), to: addDays(digestDate, -1) };
+}
+
+export function isInDigestWindow(detectedAt: string, digestDate: string): boolean {
   const at = new Date(detectedAt);
   if (Number.isNaN(at.getTime())) return false;
-  return sittingDateInOttawa(at) === sittingDate;
+  const day = ottawaDate(at);
+  const { from, to } = digestWindow(digestDate);
+  return day >= from && day <= to;
 }
 
 function billNumberSort(a: string, b: string): number {
@@ -101,13 +110,13 @@ function unwrapBill(bills: DigestHistoryRow["bills"]): {
 }
 
 /**
- * Bills whose status/stage was detected on `sittingDate` (Ottawa). If a bill moved more
- * than once, keep the latest snapshot. Sorted by bill number so the email is stable.
+ * Bills whose status/stage changed in the week a digest sent on `digestDate` covers. If a bill
+ * moved more than once, keep the latest snapshot. Sorted by bill number so the email is stable.
  */
-export function selectDigestBills(rows: DigestHistoryRow[], sittingDate: string): DigestBill[] {
+export function selectDigestBills(rows: DigestHistoryRow[], digestDate: string): DigestBill[] {
   const latest = new Map<string, { detectedAt: string; bill: DigestBill }>();
   for (const row of rows) {
-    if (!isOnSittingDate(row.detected_at, sittingDate)) continue;
+    if (!isInDigestWindow(row.detected_at, digestDate)) continue;
     const raw = unwrapBill(row.bills);
     if (!raw) continue;
     const prev = latest.get(raw.bill_number);
@@ -128,30 +137,25 @@ export function selectDigestBills(rows: DigestHistoryRow[], sittingDate: string)
     .sort((a, b) => billNumberSort(a.billNumber, b.billNumber));
 }
 
-/** Inclusive lower bound that covers a full Ottawa calendar day regardless of DST. */
-export function historyLookupStart(sittingDate: string): string {
-  const start = new Date(`${sittingDate}T00:00:00.000Z`);
-  start.setUTCDate(start.getUTCDate() - 1);
-  return start.toISOString();
+/** Lower bound for the history query: a day before the window, so no Ottawa hour is missed. */
+export function historyLookupStart(digestDate: string): string {
+  return `${addDays(digestWindow(digestDate).from, -1)}T00:00:00.000Z`;
 }
 
 export async function loadDigestBills(
   supabase: SupabaseClient,
-  sittingDate: string,
+  digestDate: string,
 ): Promise<DigestBill[]> {
   const { data, error } = await supabase
     .from("bill_status_history")
     .select("detected_at, status, stage, bills!inner(bill_number, title, legisinfo_url)")
-    .gte("detected_at", historyLookupStart(sittingDate));
+    .gte("detected_at", historyLookupStart(digestDate));
   if (error || !data) return [];
-  return selectDigestBills(data as unknown as DigestHistoryRow[], sittingDate);
+  return selectDigestBills(data as unknown as DigestHistoryRow[], digestDate);
 }
 
 /** Queue one outbox row per confirmed digest subscriber. Idempotent on (subscriber, date). */
-export async function enqueueDigest(
-  supabase: SupabaseClient,
-  sittingDate: string,
-): Promise<number> {
+export async function enqueueDigest(supabase: SupabaseClient, digestDate: string): Promise<number> {
   const { data: subs, error } = await supabase
     .from("subscribers")
     .select("id")
@@ -162,11 +166,11 @@ export async function enqueueDigest(
 
   const rows = subs.map((s) => ({
     subscriber_id: (s as { id: string }).id,
-    sitting_date: sittingDate,
+    digest_date: digestDate,
   }));
 
   const { error: insErr, count } = await supabase.from("digest_outbox").upsert(rows, {
-    onConflict: "subscriber_id,sitting_date",
+    onConflict: "subscriber_id,digest_date",
     ignoreDuplicates: true,
     count: "exact",
   });
@@ -183,8 +187,8 @@ async function markOutbox(
 }
 
 /**
- * Drain pending digest rows. Loads the bill list for each row's sitting_date so a retry
- * the next day still sends yesterday's moves, not today's. sendEmail is a no-op without
+ * Drain pending digest rows. Loads the bill list for each row's digest_date so a retry
+ * the next day still sends that week's moves. sendEmail is a no-op without
  * RESEND_API_KEY (same as per-bill notify).
  */
 export async function drainDigestOutbox(
@@ -194,7 +198,7 @@ export async function drainDigestOutbox(
   const { data, error } = await supabase
     .from("digest_outbox")
     .select(
-      "id, attempts, sitting_date, subscribers!inner(email, unsubscribe_token, digest_opt_in, confirmed)",
+      "id, attempts, digest_date, subscribers!inner(email, unsubscribe_token, digest_opt_in, confirmed)",
     )
     .eq("state", "pending")
     .limit(limit);
@@ -206,10 +210,10 @@ export async function drainDigestOutbox(
 
   for (const row of data as unknown as DigestOutboxRow[]) {
     const sub = row.subscribers;
-    if (!billsByDate.has(row.sitting_date)) {
-      billsByDate.set(row.sitting_date, await loadDigestBills(supabase, row.sitting_date));
+    if (!billsByDate.has(row.digest_date)) {
+      billsByDate.set(row.digest_date, await loadDigestBills(supabase, row.digest_date));
     }
-    const bills = billsByDate.get(row.sitting_date) ?? [];
+    const bills = billsByDate.get(row.digest_date) ?? [];
 
     // Opted out after enqueue, or nothing to list: close the row without mailing.
     if (!sub?.digest_opt_in || !sub.confirmed || bills.length === 0) {
@@ -225,7 +229,7 @@ export async function drainDigestOutbox(
     const ok = await sendEmail({
       to: sub.email,
       ...digestEmail({
-        sittingDate: row.sitting_date,
+        weekOf: digestWindow(row.digest_date),
         unsubscribeUrl,
         bills: bills.map((bill) => ({
           billNumber: bill.billNumber,
@@ -262,19 +266,21 @@ export async function drainDigestOutbox(
 }
 
 /**
- * After the evening sync: if any bills changed on today's Ottawa sitting date, enqueue a
- * digest for opt-in subscribers, then drain. Earlier runs (see isDigestTime) enqueue nothing.
- * Always drains leftover pending rows so a failed send can retry. Does not enroll anyone;
- * only confirmed digest_opt_in rows.
+ * The daily digest cron: on Mondays, queue this week's digest for confirmed opt-in
+ * subscribers if any bills moved in the past week; every day, drain pending rows so failed
+ * sends retry. Does not enroll anyone; only confirmed digest_opt_in rows.
  */
-export async function sendSittingDigest(
+export async function sendWeeklyDigest(
   supabase: SupabaseClient,
   now: Date = new Date(),
 ): Promise<DigestSendResult> {
-  const sittingDate = sittingDateInOttawa(now);
-  const bills = await loadDigestBills(supabase, sittingDate);
-  const queued =
-    isDigestTime(now) && bills.length > 0 ? await enqueueDigest(supabase, sittingDate) : 0;
+  const digestDate = ottawaDate(now);
+  let bills = 0;
+  let queued = 0;
+  if (isDigestDay(now)) {
+    bills = (await loadDigestBills(supabase, digestDate)).length;
+    queued = bills > 0 ? await enqueueDigest(supabase, digestDate) : 0;
+  }
   const { sent, failed } = await drainDigestOutbox(supabase);
-  return { sittingDate, bills: bills.length, queued, sent, failed };
+  return { digestDate, bills, queued, sent, failed };
 }

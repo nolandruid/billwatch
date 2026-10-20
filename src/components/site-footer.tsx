@@ -29,7 +29,7 @@ export function SiteFooter() {
           </a>
           {" · "}
           <Link href="/#digest" className="underline underline-offset-2 hover:text-red-600">
-            Sitting-end digest
+            Weekly digest
           </Link>
         </p>
       </div>
