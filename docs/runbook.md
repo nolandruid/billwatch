@@ -44,6 +44,11 @@ demand from the Actions tab. It fails if:
 - the homepage isn't returning 200;
 - `/api/health` reports the last sync is over 12 hours old, the bills table is empty, or
   notification emails failed or sat pending for over a day;
+- the latest cron run in `sync_runs` failed, took over 45 seconds (Vercel stops the route at
+  60s), or is over 12 hours old. Each run records its total and sync-only durations and
+  fetched/inserted/changed/queued/emailed counts, so the alert says what got slower. A run
+  that hits the 60s limit is killed before it records, so it shows up as "no recent run";
+  check the Vercel function logs for a timeout;
 - LEGISinfo's feed no longer normalizes into complete bills, or the per-bill record has
   lost its sponsor or activity date. That would have caught the August 2026 schema change
   on day one.

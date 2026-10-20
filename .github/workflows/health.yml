@@ -1,9 +1,10 @@
 name: Health check
 
 # Daily check that production is in order: the site is up, the nightly LEGISinfo sync
-# (23:00 UTC) actually wrote, notification emails aren't failing, and LEGISinfo's feed still
-# parses with our code. A failed run emails the repo owner (GitHub's default for scheduled
-# workflows) and opens an issue with the details; the issue closes itself once a run passes.
+# (23:00 UTC) actually wrote and finished inside its 45s budget (sync_runs), notification
+# emails aren't failing, and LEGISinfo's feed still parses with our code. A failed run emails
+# the repo owner (GitHub's default for scheduled workflows) and opens an issue with the
+# details; the issue closes itself once a run passes.
 #
 # GitHub disables scheduled workflows after 60 days without repo activity and emails a
 # warning first; re-enable it from the Actions tab if that happens.
