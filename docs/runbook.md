@@ -53,6 +53,18 @@ and later failures comment on the same issue. The issue closes itself on the nex
 run. Run the same checks locally with `npm run health`; set `HEALTH_SITE_URL` to point at a
 preview deployment.
 
+## Subscriber self-service
+
+Every bill email links to `/manage?token=<unsubscribe_token>` ("Manage subscriptions"), where a
+subscriber can change each bill's notification preference, stop tracking one bill, or
+unsubscribe from everything. The token in the link is the only credential, like the
+unsubscribe link, so the page is `noindex` and sends no Referer.
+
+A bill email's "Unsubscribe from C-15" link and its one-click `List-Unsubscribe` header
+(`/api/unsubscribe?token=…&bill=<bill id>`, GET for a click, POST for the mail app's button)
+stop **that bill only**. Unsubscribing from everything is the link at the bottom of the
+manage page (`/api/unsubscribe?token=…` with no `bill`), which deletes the subscriber.
+
 ## Adding a new parliamentary session
 
 When Parliament opens a new session, add its code (e.g. `"46-1"`) to `ACTIVE_SESSIONS` in

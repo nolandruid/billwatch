@@ -1,12 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail, siteUrl } from "@/lib/resend";
 import { notificationEmail } from "@/lib/emails";
+import { billUnsubscribeUrl, manageUrl } from "@/lib/manage";
 
 const MAX_ATTEMPTS = 3;
 
 interface OutboxRow {
   id: string;
   attempts: number;
+  bill_id: string;
   subscribers: { email: string; unsubscribe_token: string };
   bills: { bill_number: string; title: string };
   bill_status_history: { status: string | null };
@@ -24,7 +26,7 @@ export async function drainOutbox(
   const { data, error } = await supabase
     .from("notifications_outbox")
     .select(
-      "id, attempts, subscribers!inner(email, unsubscribe_token), bills!inner(bill_number, title), bill_status_history!inner(status)",
+      "id, attempts, bill_id, subscribers!inner(email, unsubscribe_token), bills!inner(bill_number, title), bill_status_history!inner(status)",
     )
     .eq("state", "pending")
     .limit(limit);
@@ -37,7 +39,8 @@ export async function drainOutbox(
     const { bill_number, title } = row.bills;
     const status = row.bill_status_history?.status ?? "Status updated";
     const billUrl = `${siteUrl()}/bills/${bill_number.toLowerCase()}`;
-    const unsubscribeUrl = `${siteUrl()}/api/unsubscribe?token=${unsubscribe_token}`;
+    // Stops this bill only; everything else is on the manage page.
+    const unsubscribeUrl = billUnsubscribeUrl(unsubscribe_token, row.bill_id);
 
     const ok = await sendEmail({
       to: email,
@@ -46,6 +49,7 @@ export async function drainOutbox(
         billTitle: title,
         status,
         billUrl,
+        manageUrl: manageUrl(unsubscribe_token),
         unsubscribeUrl,
       }),
       // Gmail/Outlook one-click unsubscribe.
