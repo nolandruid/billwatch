@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail, siteUrl } from "@/lib/resend";
 import { notificationEmail } from "@/lib/emails";
+import { manageUrl } from "@/lib/manage";
 
 const MAX_ATTEMPTS = 3;
 
@@ -46,6 +47,7 @@ export async function drainOutbox(
         billTitle: title,
         status,
         billUrl,
+        manageUrl: manageUrl(unsubscribe_token),
         unsubscribeUrl,
       }),
       // Gmail/Outlook one-click unsubscribe.

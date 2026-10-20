@@ -50,9 +50,10 @@ export function notificationEmail(opts: {
   billTitle: string;
   status: string;
   billUrl: string;
+  manageUrl: string;
   unsubscribeUrl: string;
 }): { subject: string; html: string; text: string } {
-  const { billNumber, billTitle, status, billUrl, unsubscribeUrl } = opts;
+  const { billNumber, billTitle, status, billUrl, manageUrl, unsubscribeUrl } = opts;
   const subject = `${billNumber} just changed status`;
   const html = layout(
     `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;">${billNumber} &middot; ${escapeHtml(
@@ -63,6 +64,7 @@ export function notificationEmail(opts: {
        text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px;">
        View ${billNumber} on BillWatch</a>`,
     `You're getting this because you subscribed to ${billNumber} on billwatch.ca.
+     <a href="${manageUrl}" style="color:#6b7280;">Manage subscriptions</a> &middot;
      <a href="${unsubscribeUrl}" style="color:#6b7280;">Unsubscribe</a>.
      BillWatch is an independent, open-source project, not affiliated with the Government of Canada.`,
   );
@@ -71,6 +73,7 @@ ${status}
 
 View on BillWatch: ${billUrl}
 
+Manage subscriptions: ${manageUrl}
 Unsubscribe: ${unsubscribeUrl}
 BillWatch is independent and not affiliated with the Government of Canada.`;
   return { subject, html, text };
@@ -80,9 +83,10 @@ export function subscribedEmail(opts: {
   billNumber: string;
   billTitle: string;
   billUrl: string;
+  manageUrl: string;
   unsubscribeUrl: string;
 }): { subject: string; html: string; text: string } {
-  const { billNumber, billTitle, billUrl, unsubscribeUrl } = opts;
+  const { billNumber, billTitle, billUrl, manageUrl, unsubscribeUrl } = opts;
   const subject = `You're now tracking ${billNumber}`;
   const html = layout(
     `<p style="margin:0 0 16px;">You're now tracking <strong>${billNumber}</strong> &mdash;
@@ -91,6 +95,7 @@ export function subscribedEmail(opts: {
        text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px;">
        View ${billNumber} on BillWatch</a>`,
     `You subscribed on billwatch.ca.
+     <a href="${manageUrl}" style="color:#6b7280;">Manage subscriptions</a> &middot;
      <a href="${unsubscribeUrl}" style="color:#6b7280;">Unsubscribe</a>.
      BillWatch is an independent, open-source project, not affiliated with the Government of Canada.`,
   );
@@ -98,6 +103,7 @@ export function subscribedEmail(opts: {
 
 View on BillWatch: ${billUrl}
 
+Manage subscriptions: ${manageUrl}
 Unsubscribe: ${unsubscribeUrl}
 BillWatch is independent and not affiliated with the Government of Canada.`;
   return { subject, html, text };
