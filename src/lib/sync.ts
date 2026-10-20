@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchBillsWithDetails, type NormalizedBill } from "@/lib/legisinfo";
+import { classifyChange, preferencesMatching, type NotifyOn } from "@/lib/notify-prefs";
 
 /** Sessions to sync. Add new sessions here as Parliament opens them. */
 export const ACTIVE_SESSIONS = ["45-1"];
@@ -22,6 +23,9 @@ interface ExistingBill {
   sponsor: string | null;
   /** Set only when source_json is in LEGISinfo's current record shape. */
   number_code: string | null;
+  house_third: string | null;
+  senate_third: string | null;
+  royal_assent: string | null;
 }
 
 function key(parliament: number, session: number, billNumber: string): string {
@@ -46,7 +50,7 @@ export async function syncSession(
   const { data: existingRows, error: existingErr } = await supabase
     .from("bills")
     .select(
-      "id, bill_number, parliament, session, current_status, current_stage, sponsor, number_code:source_json->>NumberCode",
+      "id, bill_number, parliament, session, current_status, current_stage, sponsor, number_code:source_json->>NumberCode, house_third:source_json->>PassedHouseThirdReadingDateTime, senate_third:source_json->>PassedSenateThirdReadingDateTime, royal_assent:source_json->>ReceivedRoyalAssentDateTime",
     );
   if (existingErr) throw new Error(`Failed to load existing bills: ${existingErr.message}`);
 
@@ -90,7 +94,30 @@ export async function syncSession(
     if (statusChanged) {
       result.changed += 1;
       const historyId = await insertHistory(supabase, billId, bill);
-      result.notificationsQueued += await enqueueNotifications(supabase, billId, historyId);
+      const kinds = classifyChange(
+        {
+          status: existing.current_status,
+          milestones: {
+            houseThirdReading: existing.house_third,
+            senateThirdReading: existing.senate_third,
+            royalAssent: existing.royal_assent,
+          },
+        },
+        {
+          status: bill.currentStatus,
+          milestones: {
+            houseThirdReading: bill.source.PassedHouseThirdReadingDateTime,
+            senateThirdReading: bill.source.PassedSenateThirdReadingDateTime,
+            royalAssent: bill.source.ReceivedRoyalAssentDateTime,
+          },
+        },
+      );
+      result.notificationsQueued += await enqueueNotifications(
+        supabase,
+        billId,
+        historyId,
+        preferencesMatching(kinds),
+      );
     }
   }
 
@@ -142,16 +169,21 @@ async function insertHistory(
   return data.id as string;
 }
 
-/** Enqueue one outbox row per confirmed subscriber to the bill. Returns the count queued. */
+/**
+ * Enqueue one outbox row per confirmed subscriber to the bill whose notification preference
+ * is one of `prefs`. Returns the count queued.
+ */
 async function enqueueNotifications(
   supabase: SupabaseClient,
   billId: string,
   historyId: string,
+  prefs: NotifyOn[],
 ): Promise<number> {
   const { data: subs, error } = await supabase
     .from("subscriptions")
     .select("subscriber_id, subscribers!inner(confirmed)")
     .eq("bill_id", billId)
+    .in("notify_on", prefs)
     .eq("subscribers.confirmed", true);
   if (error) throw new Error(`Failed to load subscribers for bill ${billId}: ${error.message}`);
   if (!subs || subs.length === 0) return 0;

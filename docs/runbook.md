@@ -67,7 +67,7 @@ LEGISinfo's JSON shape changed, fix [`src/lib/legisinfo.ts`](../src/lib/legisinf
 
 **A status change didn't notify someone.**
 Check, in order: (1) is the subscriber `confirmed = true`? (2) is there a `subscriptions` row
-linking them to the bill? (3) is there a `bill_status_history` row for the change? (4) is there
+linking them to the bill, and does its `notify_on` preference cover this kind of change? (3) is there a `bill_status_history` row for the change? (4) is there
 a `notifications_outbox` row, and what is its `state` / `last_error`?
 
 **Suspected duplicate or missed sync.**

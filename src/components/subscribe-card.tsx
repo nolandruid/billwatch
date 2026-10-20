@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Bell, Check } from "lucide-react";
+import { NotifyOnSelect, notifyOnSummary } from "@/components/notify-on-select";
+import { DEFAULT_NOTIFY_ON, type NotifyOn } from "@/lib/notify-prefs";
 
 type Status = "idle" | "sending" | "confirmation_sent" | "subscribed" | "error";
 
@@ -13,6 +15,7 @@ type Status = "idle" | "sending" | "confirmation_sent" | "subscribed" | "error";
  */
 export function SubscribeCard({ billNumber }: { billNumber: string }) {
   const [email, setEmail] = useState("");
+  const [notifyOn, setNotifyOn] = useState<NotifyOn>(DEFAULT_NOTIFY_ON);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState("");
 
@@ -25,7 +28,7 @@ export function SubscribeCard({ billNumber }: { billNumber: string }) {
       const res = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, billNumber }),
+        body: JSON.stringify({ email, billNumber, notifyOn }),
       });
       const data = (await res.json()) as { ok: boolean; status?: Status; message?: string };
       if (data.ok && (data.status === "confirmation_sent" || data.status === "subscribed")) {
@@ -74,7 +77,7 @@ export function SubscribeCard({ billNumber }: { billNumber: string }) {
                 <>
                   You&apos;re now tracking{" "}
                   <span className="font-semibold text-white">{billNumber}</span>. We&apos;ll email
-                  you each time it changes status.
+                  you {notifyOnSummary(notifyOn)}.
                 </>
               )}
             </p>
@@ -93,6 +96,11 @@ export function SubscribeCard({ billNumber }: { billNumber: string }) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="example@example.com"
                 className="focus:ring-cerise w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/40 focus:border-transparent focus:ring-2"
+              />
+              <NotifyOnSelect
+                value={notifyOn}
+                onChange={setNotifyOn}
+                className="focus:ring-cerise w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2.5 text-sm text-white outline-none focus:border-transparent focus:ring-2"
               />
               {status === "error" && <p className="text-xs text-rose-200">{error}</p>}
               <button

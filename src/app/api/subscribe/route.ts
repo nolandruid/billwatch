@@ -1,14 +1,16 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { subscribeToBill } from "@/lib/subscriptions";
+import { DEFAULT_NOTIFY_ON, isNotifyOn } from "@/lib/notify-prefs";
 
 export const dynamic = "force-dynamic";
 
 /**
- * POST { email, billNumber } → start (double-opt-in) tracking a bill.
+ * POST { email, billNumber, notifyOn? } → start (double-opt-in) tracking a bill.
+ * notifyOn is all | milestones | law | died (default all).
  * Returns { ok, status, message } where status is confirmation_sent | subscribed | error.
  */
 export async function POST(request: Request) {
-  let body: { email?: unknown; billNumber?: unknown };
+  let body: { email?: unknown; billNumber?: unknown; notifyOn?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -23,10 +25,17 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  if (body.notifyOn !== undefined && !isNotifyOn(body.notifyOn)) {
+    return Response.json(
+      { ok: false, status: "error", message: "Invalid notification preference." },
+      { status: 400 },
+    );
+  }
+  const notifyOn = body.notifyOn ?? DEFAULT_NOTIFY_ON;
 
   try {
     const supabase = createAdminClient();
-    const result = await subscribeToBill(supabase, email, billNumber);
+    const result = await subscribeToBill(supabase, email, billNumber, notifyOn);
     return Response.json(result, { status: result.ok ? 200 : 400 });
   } catch (err) {
     console.error("[api/subscribe]", err);
