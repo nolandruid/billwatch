@@ -61,7 +61,7 @@ preview deployment.
 
 ## Weekly status report
 
-`/api/cron/weekly-report` emails `OWNER_NOTIFY_EMAIL` every Monday at 13:00 UTC (8am EST /
+`/api/cron/weekly-report` emails `OWNER_NOTIFY_EMAIL` every Saturday at 13:00 UTC (8am EST /
 9am EDT) with the last 7 days: sync runs (count, failures, average and slowest duration,
 changes detected), subscribers (confirmed, new this week, unconfirmed), bill subscriptions,
 and notification emails sent and failed. The subject says "all good" or how many issues need

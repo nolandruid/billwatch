@@ -6,7 +6,7 @@ import { weeklyReport, type WeeklyStats } from "@/lib/weekly-report";
 
 /**
  * Weekly status email to OWNER_NOTIFY_EMAIL: sync runs, subscriber growth and email delivery
- * for the last 7 days. Schedule is `0 13 * * 1` in `vercel.json` (Mondays 13:00 UTC = 8am
+ * for the last 7 days. Schedule is `0 13 * * 6` in `vercel.json` (Saturdays 13:00 UTC = 8am
  * EST / 9am EDT Ottawa). Protected by CRON_SECRET.
  */
 export const dynamic = "force-dynamic";
